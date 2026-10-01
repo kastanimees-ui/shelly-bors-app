@@ -11,13 +11,13 @@
 <style>
 :root{
   --bg:#E9EEEC; --panel:#F7F9F8; --ink:#1D2A30; --muted:#5E6F77; --line:#C9D3D1;
-  --heat:#8CC98A; --heat-ink:#1F3D1E; --pause:#A3B1B8; --fjord:#2C6A88; --heat-text:#3E8A3B; --warn:#B3261E;
+  --heat:#8CC98A; --heat-ink:#1F3D1E; --pause:#A3B1B8; --fjord:#2C6A88; --heat-text:#3E8A3B; --prio:#F2B880; --warn:#B3261E;
   --radius-l:14px; --radius-s:6px;
   font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:light dark;
 }
 @media (prefers-color-scheme:dark){
-  :root{--bg:#141B1E;--panel:#1C2529;--ink:#E3EAEC;--muted:#93A4AB;--line:#2F3B40;--heat:#6FB06D;--heat-ink:#0F240E;--pause:#4E5D64;--fjord:#7BB6D4;--heat-text:#8FD08C;--warn:#F2877F}
+  :root{--bg:#141B1E;--panel:#1C2529;--ink:#E3EAEC;--muted:#93A4AB;--line:#2F3B40;--heat:#6FB06D;--heat-ink:#0F240E;--pause:#4E5D64;--fjord:#7BB6D4;--heat-text:#8FD08C;--prio:#C98A4B;--warn:#F2877F}
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink)}
@@ -61,10 +61,13 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 #bars.q{gap:1px}
 .bar{flex:1 1 0;min-width:1px;background:var(--pause);border-radius:3px 3px 0 0;position:relative;border:0;padding:0}
 .bar.none{background:var(--line)}
+.bar.prio{background:var(--prio)}
 #priceSec{position:relative}
 #tip{position:absolute;top:10px;right:16px;width:min(400px,calc(100% - 270px));min-height:3.6em;padding:8px 12px;background:var(--bg);border-radius:var(--radius-s);font-size:.9rem;z-index:3}
 @media (max-width:640px){#tip{position:static;width:auto;margin-bottom:8px}}
 #tip .row{display:flex;justify-content:space-between;gap:8px}
+#tip .act{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px}
+#tip .act button{padding:5px 16px}
 .bar.heat{background:var(--heat)}
 .bar.past{opacity:.35}
 .bar.now{outline:2px solid var(--ink);outline-offset:1px}
@@ -146,11 +149,12 @@ header h1{font-size:1.35rem}
     <div class="legend">
       <span><i class="sw" style="background:var(--heat)"></i>Küte lubatud</span>
       <span><i class="sw" style="background:var(--pause)"></i>Paus</span>
+      <span><i class="sw" style="background:var(--prio)"></i>Prioriteetaeg, hind üle hinnapiiri</span>
       <span><i class="sw" style="border-top:2px dashed var(--fjord);height:0;width:16px;border-radius:0"></i>Hinnapiir</span>
       <span><i class="sw" style="border-top:2px dotted var(--ink);height:0;width:16px;border-radius:0"></i>Prioriteetaja piir</span>
       <span><b style="color:var(--fjord)">S/P</b> käsitsi SEES/PAUS</span>
     </div>
-    <p class="muted small">Tuleviku perioodi puudutus vahetab olekut: automaatne → SEES → PAUS. Muudatus salvestub 2 sekundi pärast. Plaan arvestab hinnapiire; kaitseajad võivad tegelikku olekut muuta.</p>
+    <p class="muted small">Puuduta tulpa ja vajuta „Muuda“, et vahetada tuleviku perioodi olekut: automaatne → SEES → PAUS. Muudatus salvestub 2 sekundi pärast. Plaan arvestab hinnapiire; kaitseajad võivad tegelikku olekut muuta.</p>
   </section>
 
   <section>
@@ -254,7 +258,6 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
   for(var ts=m;ts<end;ts+=step){var raw=periodRaw(ts,res);items.push({ts:ts,raw:raw,f:raw===null?null:fp(raw),pl:plan(ts,raw),pr:inPrio(ts)})}
   var cnt=0,mx=S.price.limit,mn=0,anyPr=false;
   items.forEach(function(it){if(it.pr)anyPr=true;if(it.f!==null){cnt++;if(it.f>mx)mx=it.f;if(it.f<mn)mn=it.f}});
-  if(anyPr&&S.price.priorityLimit>mx)mx=S.price.priorityLimit;
   var st=(mx-mn)<=40?5:10,hi=Math.ceil(mx/st)*st,lo=mn<0?Math.floor(mn/st)*st:0;if(hi<=lo)hi=lo+st;
   var PH=150;function y(v){return (v-lo)/(hi-lo)*PH}
   var u=document.createElement("div");u.className="yu";u.textContent="s/kWh";yax.appendChild(u);
@@ -263,10 +266,10 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
   var lm=document.createElement("div");lm.className="lim";lm.style.bottom=y(S.price.limit)+"px";lm.title="Hinnapiir "+r1(S.price.limit);grid.appendChild(lm);
   var n=items.length,i0=-1;
   for(var i=0;i<=n;i++){var on=i<n&&items[i].pr;if(on&&i0<0)i0=i;if(!on&&i0>=0){var p=document.createElement("div");p.className="limp";
-      p.style.left=(i0/n*100)+"%";p.style.width=((i-i0)/n*100)+"%";p.style.bottom=y(S.price.priorityLimit)+"px";grid.appendChild(p);i0=-1}}
+      p.style.left=(i0/n*100)+"%";p.style.width=((i-i0)/n*100)+"%";p.style.bottom=y(S.price.priorityLimit)+"px";if(S.price.priorityLimit<=hi)grid.appendChild(p);i0=-1}}
   box.className=res===15?"q":"";
   items.forEach(function(it){var b=document.createElement("button"),ts=it.ts;
-    b.className="bar"+(it.f===null?" none":it.pl.st?" heat":"")+(ts+step<=t?" past":"")+(ts<=t&&t<ts+step?" now":"");
+    b.className="bar"+(it.f===null?" none":(it.pr&&it.f>S.price.limit)?" prio":it.pl.st?" heat":"")+(ts+step<=t?" past":"")+(ts<=t&&t<ts+step?" now":"");
     b.dataset.ts=ts;b.dataset.f=it.f===null?"":it.f;b.dataset.raw=it.raw===null?"":it.raw;b.dataset.st=it.pl.st?1:0;b.dataset.src=it.pl.src;
     b.style.height=(it.f===null?2:Math.max(2,y(it.f)))+"px";
     b.setAttribute("aria-label",hhmm(ts)+" "+(it.f===null?"hind puudub":r1(it.f)+" senti/kWh")+", "+(it.pl.st?"küte lubatud":"paus"));
@@ -286,7 +289,8 @@ function showTip(ts){var b=$("bars").querySelector('.bar[data-ts="'+ts+'"]');if(
   var mode=ov?(ov.state?"käsitsi SEES":"käsitsi PAUS"):"automaatne";
   $("tip").innerHTML='<div class="row"><b>'+hhmm(ts)+"–"+hhmm(ts+step)+'</b><b class="num">'+(f===""?"–":r1(+f)+" s/kWh")+'</b></div>'+
     '<div class="row muted"><span>'+reason(src,st)+'</span><span class="num">'+(raw===""?"":"börs "+r1(+raw/10))+'</span></div>'+
-    (fut?'<div class="small">Olek: <b>'+mode+'</b></div>':'<div class="small muted">Möödunud periood</div>')+actualLine(ts,step,st,src)}
+    (fut?'<div class="act small"><span>Olek: <b>'+mode+'</b></span><button type="button" id="tipBtn">Muuda</button></div>':'<div class="small muted">Möödunud periood</div>')+actualLine(ts,step,st,src);
+  var btn=$("tipBtn");if(btn)btn.onclick=function(e){e.stopPropagation();cycleOv(ts)}}
 // Jooksva perioodi tegelik olek ajaloost, kui see erineb plaanist
 function actualLine(ts,step,st,src){var t=now();if(!(ts<=t&&t<ts+step))return "";var l=lastHist();if(!l||l.ts<ts)return "";
   if(l.act===st&&l.src===src)return "";
@@ -400,8 +404,7 @@ function showLogin(msg){$("app").hidden=true;$("login").hidden=false;$("loginErr
 $("tokenSave").onclick=function(){var t=$("tokenIn").value.trim();if(!t)return;token=t;localStorage.setItem("sb_token",t);$("tokenIn").value="";load()};
 $("logout").onclick=function(){if(!confirm("Eemaldada token sellest seadmest?"))return;localStorage.removeItem("sb_token");token="";showLogin()};
 $("reload").onclick=function(){if(token)load()};
-$("bars").onclick=function(e){var b=e.target.closest(".bar");if(!b)return;e.stopPropagation();var ts=+b.dataset.ts;
-  if(ts+S.resolution*60>now())cycleOv(ts);else{tipTs=ts;showTip(ts)}};
+$("bars").onclick=function(e){var b=e.target.closest(".bar");if(!b)return;e.stopPropagation();tipTs=+b.dataset.ts;showTip(tipTs)};
 $("bars").onmouseover=function(e){var b=e.target.closest(".bar");if(b)showTip(+b.dataset.ts)};
 $("plot").onmouseleave=function(){if(tipTs!==null)showTip(tipTs);else tipDefault()};
 document.addEventListener("click",function(e){if(!$("plot").contains(e.target)&&!$("tip").contains(e.target))hideTip()});
