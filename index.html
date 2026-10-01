@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="et">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Börsiküte</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♨️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EEEC; --panel:#F7F9F8; --ink:#1D2A30; --muted:#5E6F77; --line:#C9D3D1;
+  --heat:#E9A100; --heat-ink:#5A3E00; --pause:#A3B1B8; --fjord:#2C6A88; --warn:#B3261E;
+  --radius-l:14px; --radius-s:6px;
+  font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#141B1E;--panel:#1C2529;--ink:#E3EAEC;--muted:#93A4AB;--line:#2F3B40;--heat:#F2B12E;--heat-ink:#2A1D00;--pause:#4E5D64;--fjord:#7BB6D4;--warn:#F2877F}
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);font-size:17px;line-height:1.45}
+main{max-width:720px;margin:0 auto;padding:16px}
+h1,h2,h3{margin:0;line-height:1.2}
+h2{font-size:1.15rem;margin-bottom:10px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:var(--radius-s);padding:8px 14px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--fjord);outline-offset:2px}
+button.primary{background:var(--fjord);border-color:var(--fjord);color:#fff}
+button:disabled{opacity:.5;cursor:default}
+section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margin-bottom:14px}
+.muted{color:var(--muted)}
+.small{font-size:.88rem}
+.num{font-variant-numeric:tabular-nums}
+
+/* Olekupaneel */
+#state{display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:end}
+#state .label{font-size:2.1rem;font-weight:700;letter-spacing:-.01em}
+#state.heat .label{color:var(--heat)}
+#state .price{font-size:2.1rem;font-weight:700;text-align:right}
+#state .price small{font-size:.95rem;font-weight:400;color:var(--muted)}
+.boost{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.boost .on{background:var(--heat);border-color:var(--heat);color:var(--heat-ink);font-weight:700}
+
+/* Hinnariba */
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+#bars{display:flex;align-items:flex-end;gap:2px;height:180px;padding-top:18px;position:relative;overflow-x:auto}
+.bar{flex:1 0 8px;min-width:8px;background:var(--pause);border-radius:3px 3px 0 0;position:relative;border:0;padding:0}
+.bar.heat{background:var(--heat)}
+.bar.past{opacity:.35}
+.bar.now{outline:2px solid var(--ink);outline-offset:1px}
+.bar .ov{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:.7rem;font-weight:700;color:var(--fjord)}
+.axis{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin-top:4px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);margin-top:8px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+#barinfo{min-height:1.4em;margin-top:6px}
+
+/* Ajalugu */
+.hrow{display:grid;grid-template-columns:62px 1fr;align-items:center;gap:8px;margin-bottom:6px}
+.hcells{display:grid;grid-template-columns:repeat(96,1fr);height:22px;border-radius:4px;overflow:hidden;background:var(--line)}
+.hc{background:transparent}
+.hc.p0{background:var(--pause)}
+.hc.p1{background:var(--heat)}
+.hc.miss{background:repeating-linear-gradient(45deg,var(--pause),var(--pause) 2px,transparent 2px,transparent 4px)}
+.hticks{display:grid;grid-template-columns:62px 1fr;gap:8px;font-size:.75rem;color:var(--muted)}
+.hticks div:last-child{display:flex;justify-content:space-between}
+
+/* Seaded */
+fieldset{border:0;padding:0;margin:0 0 18px}
+legend{font-weight:700;margin-bottom:8px}
+.field{display:grid;grid-template-columns:1fr 130px 34px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.field label{min-width:0}
+.field input,.field select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--bg)}
+.field input[type=checkbox]{width:22px;height:22px;justify-self:start}
+.help{width:30px;height:30px;padding:0;border-radius:50%;font-weight:700;color:var(--fjord)}
+.helptext{grid-column:1/-1;margin:2px 0 6px;color:var(--muted);font-size:.9rem}
+.err{color:var(--warn)}
+
+#savebar{position:sticky;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--ink);color:var(--panel);display:flex;gap:10px;align-items:center;justify-content:space-between;border-radius:var(--radius-l) var(--radius-l) 0 0}
+#savebar[hidden]{display:none}
+#savebar button{border-color:var(--panel)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:10px 16px;border-radius:var(--radius-s);display:none;max-width:90vw}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+header h1{font-size:1.35rem}
+#login input{width:100%;padding:10px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--bg);margin:10px 0}
+@media (max-width:480px){.field{grid-template-columns:1fr 110px 34px}#state .label,#state .price{font-size:1.7rem}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Börsiküte</h1>
+  <div>
+    <button id="reload" title="Laadi uuesti">Värskenda</button>
+  </div>
+</header>
+
+<section id="login" hidden>
+  <h2>Ühenda GitHubiga</h2>
+  <p class="muted small">Sisesta GitHubi token, millel on repo <b>shelly-bors</b> õigus „Contents: Read and write“. Token salvestatakse ainult selle seadme brauserisse.</p>
+  <input id="tokenIn" type="password" autocomplete="off" placeholder="github_pat_...">
+  <button class="primary" id="tokenSave">Ühenda</button>
+  <p id="loginErr" class="err small"></p>
+</section>
+
+<div id="app" hidden>
+  <section id="stateBox">
+    <div id="state">
+      <div class="label" id="stLabel">–</div>
+      <div class="price num" id="stPrice">–</div>
+      <div class="muted small" id="stSrc"></div>
+      <div class="muted small" id="stTime" style="text-align:right"></div>
+    </div>
+    <div class="boost" id="boostBox"></div>
+  </section>
+
+  <section>
+    <h2>Hinnad ja plaan</h2>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-day="0">Täna</button>
+      <button role="tab" aria-selected="false" data-day="1">Homme</button>
+    </div>
+    <div id="bars" aria-label="Perioodide hinnad"></div>
+    <div class="axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+    <div id="barinfo" class="small"></div>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--heat)"></i>Küte lubatud</span>
+      <span><i class="sw" style="background:var(--pause)"></i>Paus</span>
+      <span><b style="color:var(--fjord)">S/P</b> käsitsi SEES/PAUS</span>
+    </div>
+    <p class="muted small">Puuduta tulevast perioodi, et valida käsitsi olek: automaatne → SEES → PAUS. Plaan arvestab hinnapiire; kaitseajad võivad tegelikku olekut muuta.</p>
+  </section>
+
+  <section>
+    <h2>Ajalugu</h2>
+    <div id="hist"></div>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--heat)"></i>Küte lubatud</span>
+      <span><i class="sw" style="background:var(--pause)"></i>Paus</span>
+      <span><i class="sw" style="background:repeating-linear-gradient(45deg,var(--pause),var(--pause) 2px,transparent 2px,transparent 4px)"></i>Tegelik erines plaanist</span>
+    </div>
+    <div id="histInfo" class="small" style="margin-top:6px"></div>
+  </section>
+
+  <section>
+    <h2>Seaded</h2>
+    <form id="form" onsubmit="return false"></form>
+    <p class="muted small">Shelly loeb muudatused sisse umbes minuti jooksul.</p>
+    <button id="logout" class="small">Unusta token sellest seadmest</button>
+  </section>
+</div>
+</main>
+
+<div id="savebar" hidden>
+  <span id="saveMsg">Salvestamata muudatused</span>
+  <span><button id="discard">Tühista</button> <button class="primary" id="save">Salvesta</button></span>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+"use strict";
+var OWNER="kastanimees-ui", REPO="shelly-bors", TZ="Europe/Tallinn";
+var API="https://api.github.com/repos/"+OWNER+"/"+REPO+"/contents/";
+var EL="https://dashboard.elering.ee/api/nps/price";
+var E="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+var SRC={1:"Turvarežiim",2:"Boost",3:"Käsitsi",4:"Prioriteetaeg",5:"Börs",6:"Kaitseaeg"};
+var MAX_OV=10;
+
+var token=localStorage.getItem("sb_token")||"";
+var S=null, S0="", sha=null, H=null, prices={}, day=0, dirty=false;
+
+function $(id){return document.getElementById(id)}
+function toast(t){var el=$("toast");el.textContent=t;el.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(function(){el.style.display="none"},3500)}
+function now(){return Math.floor(Date.now()/1000)}
+function r1(x){return (Math.round(x*10)/10).toFixed(1).replace(".",",")}
+
+// ---------- Aeg (Europe/Tallinn) ----------
+var dtf=new Intl.DateTimeFormat("en-GB",{timeZone:TZ,hour12:false,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"});
+function tzOff(ts){var p={};dtf.formatToParts(new Date(ts*1000)).forEach(function(x){p[x.type]=x.value});
+  var u=Date.UTC(+p.year,+p.month-1,+p.day,+p.hour%24,+p.minute,+p.second);return Math.round(u/1000-ts)}
+function midnight(ts){var o=tzOff(ts);var m=ts-((ts+o)%86400+86400)%86400;var o2=tzOff(m);return m+(o-o2)}
+function hhmm(ts){return new Intl.DateTimeFormat("et-EE",{timeZone:TZ,hour:"2-digit",minute:"2-digit"}).format(new Date(ts*1000))}
+function dname(ts){return new Intl.DateTimeFormat("et-EE",{timeZone:TZ,weekday:"short",day:"numeric",month:"numeric"}).format(new Date(ts*1000))}
+
+// ---------- GitHub ----------
+function b64toText(b){var bin=atob(b.replace(/\n/g,""));var u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder().decode(u)}
+function textToB64(t){var u=new TextEncoder().encode(t),s="";for(var i=0;i<u.length;i++)s+=String.fromCharCode(u[i]);return btoa(s)}
+function gh(path,opt){opt=opt||{};opt.headers={"Authorization":"Bearer "+token,"Accept":"application/vnd.github+json"};opt.cache="no-store";return fetch(API+path,opt)}
+function getFile(name){return gh(name).then(function(r){if(r.status===401)throw new Error("auth");if(!r.ok)throw new Error("GitHub "+r.status);return r.json()}).then(function(j){return{sha:j.sha,text:b64toText(j.content)}})}
+function putFile(name,text,s,msg){return gh(name,{method:"PUT",body:JSON.stringify({message:msg,content:textToB64(text),sha:s})}).then(function(r){if(r.status===409)throw new Error("conflict");if(!r.ok)throw new Error("GitHub "+r.status);return r.json()}).then(function(j){return j.content.sha})}
+
+// ---------- Seadete valideerimine (sama mis skriptis) ----------
+function isNum(x){return typeof x==="number"&&isFinite(x)}
+function rng(x,a,b){return isNum(x)&&x>=a&&x<=b}
+function hm(s){var m=/^(\d\d):(\d\d)$/.exec(s||"");if(!m)return -1;var h=+m[1],mi=+m[2];return(h>23||mi>59)?-1:h*60+mi}
+function validate(o){var e=[],p=o.price||{},q=o.priority||{},t=o.protect||{};
+  if(o.resolution!==60&&o.resolution!==15)e.push("Resolutsioon");
+  if(!rng(p.limit,-100,1000))e.push("Hinnapiir");
+  if(!rng(p.priorityLimit,-100,1000))e.push("Prioriteetaja hinnapiir");
+  if(!rng(p.margin,-100,100))e.push("Marginaal");
+  if(!rng(p.network,0,100))e.push("Võrgutasu");
+  if(!rng(p.other,-100,100))e.push("Muud tasud");
+  if(!rng(p.vatPct,0,50))e.push("Käibemaks");
+  if(hm(q.start)<0)e.push("Prioriteetaja algus");
+  if(hm(q.end)<0)e.push("Prioriteetaja lõpp");
+  if(!rng(t.minOnMin,0,1440))e.push("Min tööaeg");
+  if(!rng(t.minOffMin,0,1440))e.push("Min pausiaeg");
+  if(!rng(t.maxOffMin,0,1440)||(t.maxOffMin>0&&t.maxOffMin<t.minOffMin))e.push("Max pausiaeg (peab olema 0 või ≥ min pausiaeg)");
+  if(t.failsafeOnMin!==undefined&&!rng(t.failsafeOnMin,0,1440))e.push("Turvarežiimi järgne kaitseaeg");
+  if(!Array.isArray(o.overrides)||o.overrides.length>MAX_OV)e.push("Käsitsi perioodid (max "+MAX_OV+")");
+  return e}
+
+// ---------- Hinnad ----------
+function fp(raw){var p=S.price;return(raw/10+p.margin+p.network+p.other)*(1+p.vatPct/100)}
+function loadPrices(){var m=midnight(now());var s=new Date(m*1000).toISOString(),e=new Date((m+2*86400+7200)*1000).toISOString();
+  return fetch(EL+"?start="+s+"&end="+e).then(function(r){if(!r.ok)throw new Error("Elering "+r.status);return r.json()}).then(function(j){
+    prices={};(j.data&&j.data.ee||[]).forEach(function(x){prices[x.timestamp]=x.price})})}
+function periodRaw(ts,res){if(res===15)return prices[ts]===undefined?null:prices[ts];
+  var s=0,n=0;for(var k=0;k<4;k++){var v=prices[ts+k*900];if(v!==undefined){s+=v;n++}}return n?s/n:null}
+function inPrio(ts){var a=hm(S.priority.start),b=hm(S.priority.end);if(a===b)return false;
+  var mins=Math.floor(((ts+tzOff(ts))%86400)/60);return a<b?(mins>=a&&mins<b):(mins>=a||mins<b)}
+function findOv(ts){for(var i=0;i<S.overrides.length;i++)if(S.overrides[i].start===ts)return S.overrides[i];return null}
+// Plaan hinnapiiride järgi (kaitseaegu ei arvesta)
+function plan(ts,raw){if(!S.enabled)return{st:true,src:1};
+  if(ts<S.boostUntil&&ts+S.resolution*60>now())return{st:true,src:2};
+  var ov=findOv(ts);if(ov)return{st:ov.state,src:3};
+  if(raw===null)return{st:true,src:1};
+  var f=fp(raw);if(inPrio(ts))return{st:f<=S.price.priorityLimit,src:4};
+  return{st:f<=S.price.limit,src:5}}
+
+// ---------- Kuvamine ----------
+function renderBars(){var box=$("bars");box.innerHTML="";if(!S)return;
+  var res=S.resolution,step=res*60,m0=midnight(now()),m=day?midnight(m0+30*3600):m0,end=midnight(m+30*3600),t=now(),cnt=0;
+  for(var ts=m;ts<end;ts+=step){var raw=periodRaw(ts,res);var pl=plan(ts,raw);var b=document.createElement("button");
+    b.className="bar"+(pl.st?" heat":"")+(ts+step<=t?" past":"")+(ts<=t&&t<ts+step?" now":"");
+    var f=raw===null?null:fp(raw);b.dataset.ts=ts;b.dataset.f=f===null?"":f;b.dataset.src=pl.src;
+    b.setAttribute("aria-label",hhmm(ts)+" "+(f===null?"hind puudub":r1(f)+" senti/kWh")+", "+(pl.st?"küte lubatud":"paus"));
+    var ov=findOv(ts);if(ov){var s=document.createElement("span");s.className="ov";s.textContent=ov.state?"S":"P";b.appendChild(s)}
+    box.appendChild(b);if(raw!==null)cnt++}
+  var max=0;box.querySelectorAll(".bar").forEach(function(b){var f=parseFloat(b.dataset.f);if(f>max)max=f});
+  box.querySelectorAll(".bar").forEach(function(b){var f=parseFloat(b.dataset.f);b.style.height=(isNaN(f)?4:Math.max(4,f/(max||1)*150))+"px"});
+  $("barinfo").textContent=cnt?"":(day?"Homseid hindu pole veel avaldatud (tavaliselt kella 14–15 paiku).":"Hinnad puuduvad.")}
+
+function onBar(e){var b=e.target.closest(".bar");if(!b)return;var ts=+b.dataset.ts,f=b.dataset.f;
+  $("barinfo").textContent=hhmm(ts)+" – "+(f===""?"hind puudub":r1(+f)+" s/kWh")+" · "+SRC[b.dataset.src];
+  if(ts+S.resolution*60<=now())return;
+  var i=-1;for(var k=0;k<S.overrides.length;k++)if(S.overrides[k].start===ts)i=k;
+  if(i<0){if(S.overrides.length>=MAX_OV){toast("Korraga saab määrata kuni "+MAX_OV+" käsitsi perioodi.");return}S.overrides.push({start:ts,state:true})}
+  else if(S.overrides[i].state)S.overrides[i].state=false;else S.overrides.splice(i,1);
+  markDirty();renderBars()}
+
+function renderState(){var t=now(),res=S.resolution,ps=t-((t+tzOff(t))%(res*60));var raw=periodRaw(ps,res),pl=plan(ps,raw);
+  var last=lastHist();var box=$("state");
+  var st=last?last.act:pl.st;box.className=st?"heat":"";
+  $("stLabel").textContent=st?"Küte lubatud":"Paus";
+  $("stPrice").innerHTML=raw===null?"–":r1(fp(raw))+" <small>s/kWh</small>";
+  $("stSrc").textContent=last?("Allikas: "+SRC[last.src]):"Shelly olek pole veel teada";
+  $("stTime").textContent=last?("Seisuga "+hhmm(last.ts)):"";
+  var bb=$("boostBox");bb.innerHTML="";var on=S.boostUntil>t;
+  if(on){var x=document.createElement("button");x.className="on";x.textContent="Boost kuni "+hhmm(S.boostUntil)+" – lõpeta";x.onclick=function(){setBoost(0)};bb.appendChild(x)}
+  [1,2,3].forEach(function(h){var x=document.createElement("button");x.textContent="Boost "+h+" h";x.onclick=function(){setBoost(t+h*3600)};bb.appendChild(x)})}
+
+// Ajalugu: märk = allikas*4 + plaanitud*2 + tegelik
+function lastHist(){if(!H)return null;for(var i=H.s.length-1;i>=0;i--){var v=E.indexOf(H.s.charAt(i));if(v>0)return{ts:H.d0+i*H.n,src:v>>2,pl:!!(v&2),act:!!(v&1)}}return null}
+function renderHist(){var box=$("hist");box.innerHTML="";if(!H){$("histInfo").textContent="Ajalugu pole veel salvestatud.";return}
+  var days={};for(var i=0;i<H.s.length;i++){var v=E.indexOf(H.s.charAt(i));var ts=H.d0+i*H.n;var m=midnight(ts);(days[m]=days[m]||[]).push({ts:ts,v:v})}
+  Object.keys(days).sort().forEach(function(k){var m=+k,row=document.createElement("div");row.className="hrow";
+    var l=document.createElement("div");l.className="small muted";l.textContent=dname(m);row.appendChild(l);
+    var c=document.createElement("div");c.className="hcells";
+    for(var j=0;j<96;j++){var ts=m+j*900,cell=document.createElement("div");cell.className="hc";
+      var it=days[k].find(function(x){return x.ts===ts});
+      if(it&&it.v>0){var act=it.v&1,pl=(it.v>>1)&1;cell.className="hc "+(act!==pl?"miss":"p"+act);cell.title=hhmm(ts)+" "+(act?"küte lubatud":"paus")+" · "+SRC[it.v>>2]}
+      c.appendChild(cell)}
+    row.appendChild(c);box.appendChild(row)});
+  var ticks=document.createElement("div");ticks.className="hticks";ticks.innerHTML="<div></div><div><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>";box.appendChild(ticks);
+  $("histInfo").textContent=""}
+
+// ---------- Seadete vorm ----------
+var FIELDS=[
+ {g:"Üldine"},
+ {k:"enabled",l:"Automaatika sees",t:"bool",h:"Väljas olles lubab Shelly kütte pidevalt (turvarežiim) ega juhi hinna järgi."},
+ {k:"profile",l:"Seade",t:"sel",o:[["heatpump","Soojuspump"],["switch","Lüliti"]],h:"Soojuspump: relee ON tähendab pausi (pöördkontakt) ja kaitseajad kehtivad. Lüliti: relee ON tähendab sees."},
+ {k:"invertRelay",l:"Pööra relee loogika",t:"bool",h:"Muuda ainult siis, kui relee juhtmestus on vastupidine."},
+ {k:"resolution",l:"Periood",t:"sel",o:[[60,"1 tund"],[15,"15 minutit"]],num:1,h:"Tunnirežiimis kasutatakse tunni nelja 15-minutilise hinna keskmist."},
+ {g:"Hind (senti/kWh, ilma käibemaksuta)"},
+ {k:"price.limit",l:"Hinnapiir",t:"num",st:0.1,h:"Kui lõpphind on sellest kõrgem, läheb küte pausile."},
+ {k:"price.margin",l:"Müüja marginaal",t:"num",st:0.01,h:"Elektrimüüja juurdehindlus lepingu järgi."},
+ {k:"price.network",l:"Võrgutasu",t:"num",st:0.01,h:"Võrguettevõtte tasu ilma käibemaksuta."},
+ {k:"price.other",l:"Muud tasud",t:"num",st:0.01,h:"Näiteks taastuvenergia tasu ja elektriaktsiis."},
+ {k:"price.vatPct",l:"Käibemaks (%)",t:"num",st:1,h:"Arvutatakse kõigi komponentide summale."},
+ {g:"Prioriteetaeg"},
+ {k:"priority.start",l:"Algus",t:"time",h:"Prioriteetajal kehtib eraldi, tavaliselt kõrgem hinnapiir."},
+ {k:"priority.end",l:"Lõpp",t:"time",h:"Kui algus ja lõpp on samad, prioriteetaega ei ole."},
+ {k:"price.priorityLimit",l:"Hinnapiir prioriteetajal",t:"num",st:0.1,h:"Prioriteetajal lubatakse küte, kui lõpphind on sellest madalam või võrdne."},
+ {g:"Kaitseajad (minutites)"},
+ {k:"protect.minOnMin",l:"Min tööaeg",t:"num",st:1,h:"Kui küte lülitus sisse, hoitakse seda vähemalt nii kaua. Kaitseb kompressorit lühikeste tsüklite eest."},
+ {k:"protect.minOffMin",l:"Min pausiaeg",t:"num",st:1,h:"Kui küte läks pausile, hoitakse pausi vähemalt nii kaua."},
+ {k:"protect.maxOffMin",l:"Max pausiaeg",t:"num",st:1,h:"Pikem paus ei ole lubatud: küte lülitatakse sisse ka kõrge hinnaga. 0 = piirangut pole."},
+ {k:"protect.failsafeOnMin",l:"Turvarežiimi järgne kaitseaeg",t:"num",st:1,def:30,h:"Kui Shelly ei tea hinda (käivitus, internetikatkestus), lubab see kütte (turvarežiim). Kui soojuspump selle ajal käivitub, hoitakse seda vähemalt siin määratud aja töös, et kaitsta kompressorit lühikeste tsüklite eest. 0 = kaitseaeg ei rakendu ja relee lülitub hinna selgumisel kohe pausile."}
+];
+function getK(o,k){return k.split(".").reduce(function(a,b){return a?a[b]:undefined},o)}
+function setK(o,k,v){var p=k.split("."),x=o;for(var i=0;i<p.length-1;i++)x=x[p[i]]=x[p[i]]||{};x[p[p.length-1]]=v}
+function renderForm(){var f=$("form");f.innerHTML="";var fs=null;
+  FIELDS.forEach(function(d){if(d.g){fs=document.createElement("fieldset");var lg=document.createElement("legend");lg.textContent=d.g;fs.appendChild(lg);f.appendChild(fs);return}
+    var row=document.createElement("div");row.className="field";var id="f_"+d.k.replace(".","_");
+    var lab=document.createElement("label");lab.htmlFor=id;lab.textContent=d.l;row.appendChild(lab);
+    var v=getK(S,d.k);if(v===undefined&&d.def!==undefined)v=d.def;var inp;
+    if(d.t==="sel"){inp=document.createElement("select");d.o.forEach(function(o){var op=document.createElement("option");op.value=o[0];op.textContent=o[1];if(String(o[0])===String(v))op.selected=true;inp.appendChild(op)})}
+    else{inp=document.createElement("input");inp.type=d.t==="bool"?"checkbox":d.t==="time"?"time":"number";
+      if(d.t==="bool")inp.checked=!!v;else{inp.value=v;if(d.st)inp.step=d.st;if(d.t==="num")inp.inputMode="decimal"}}
+    inp.id=id;inp.onchange=function(){var nv=d.t==="bool"?inp.checked:d.t==="num"?parseFloat(String(inp.value).replace(",",".")):d.num?+inp.value:inp.value;setK(S,d.k,nv);markDirty();renderAll(true)};
+    row.appendChild(inp);
+    var hb=document.createElement("button");hb.type="button";hb.className="help";hb.textContent="?";hb.setAttribute("aria-label","Selgitus: "+d.l);
+    var ht=document.createElement("p");ht.className="helptext";ht.hidden=true;ht.textContent=d.h;
+    hb.setAttribute("aria-expanded","false");hb.onclick=function(){ht.hidden=!ht.hidden;hb.setAttribute("aria-expanded",String(!ht.hidden))};
+    row.appendChild(hb);row.appendChild(ht);fs.appendChild(row)})}
+
+// ---------- Salvestamine ----------
+function markDirty(){dirty=true;$("savebar").hidden=false;var e=validate(S);$("saveMsg").textContent=e.length?"Vigased: "+e.join(", "):"Salvestamata muudatused";$("saveMsg").className=e.length?"err":"";$("save").disabled=!!e.length}
+function cleanOv(){var t=now(),len=S.resolution*60;S.overrides=S.overrides.filter(function(o){return o.start+len>t})}
+function save(msg){cleanOv();var e=validate(S);if(e.length){toast("Paranda: "+e.join(", "));return Promise.resolve()}
+  var text=JSON.stringify(S,null,2);$("save").disabled=true;
+  return putFile("settings.json",text,sha,msg||"seaded").then(function(s){sha=s;S0=text;dirty=false;$("savebar").hidden=true;toast("Salvestatud. Shelly rakendab muudatuse minuti jooksul.")})
+   .catch(function(err){if(err.message==="conflict")toast("Seadeid muudeti vahepeal mujal. Värskenda ja proovi uuesti.");else toast("Salvestamine ebaõnnestus: "+err.message)})
+   .finally(function(){$("save").disabled=false})}
+function setBoost(until){S.boostUntil=until;save(until?"boost":"boost lõpp").then(function(){renderAll()})}
+
+// ---------- Laadimine ----------
+function renderAll(keepForm){if(!S)return;renderState();renderBars();renderHist();if(!keepForm)renderForm()}
+function load(){if(dirty&&!confirm("Salvestamata muudatused lähevad kaotsi. Jätkata?"))return;
+  return getFile("settings.json").then(function(f){sha=f.sha;S0=f.text;S=JSON.parse(f.text);if(!Array.isArray(S.overrides))S.overrides=[];dirty=false;$("savebar").hidden=true;
+      $("login").hidden=true;$("app").hidden=false;renderAll()})
+    .catch(function(err){if(err.message==="auth"){localStorage.removeItem("sb_token");token="";showLogin("Token ei kehti või puudub õigus.")}else toast("Seadete laadimine ebaõnnestus: "+err.message);throw err})
+    .then(function(){return Promise.allSettled([
+      getFile("history.json").then(function(f){var o=JSON.parse(f.text);H=(o&&o.v===1&&typeof o.s==="string")?o:null}).catch(function(){H=null}),
+      loadPrices().catch(function(e){$("barinfo").textContent="Eleringi hindu ei õnnestunud laadida ("+e.message+")."})])})
+    .then(function(){renderAll(true)})}
+function showLogin(msg){$("app").hidden=true;$("login").hidden=false;$("loginErr").textContent=msg||""}
+
+$("tokenSave").onclick=function(){var t=$("tokenIn").value.trim();if(!t)return;token=t;localStorage.setItem("sb_token",t);$("tokenIn").value="";load()};
+$("logout").onclick=function(){if(!confirm("Eemaldada token sellest seadmest?"))return;localStorage.removeItem("sb_token");token="";showLogin()};
+$("reload").onclick=function(){if(token)load()};
+$("save").onclick=function(){save()};
+$("discard").onclick=function(){S=JSON.parse(S0);if(!Array.isArray(S.overrides))S.overrides=[];dirty=false;$("savebar").hidden=true;renderAll()};
+$("bars").onclick=onBar;
+document.querySelectorAll(".tabs button").forEach(function(b){b.onclick=function(){day=+b.dataset.day;document.querySelectorAll(".tabs button").forEach(function(x){x.setAttribute("aria-selected",String(x===b))});renderBars();$("barinfo").textContent=$("barinfo").textContent}});
+setInterval(function(){if(token&&!dirty&&!document.hidden)load()},5*60*1000);
+if(token)load();else showLogin();
+</script>
+</body>
+</html>
