@@ -45,7 +45,7 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 .boost .on{background:var(--heat);border-color:var(--heat);color:var(--heat-ink);font-weight:700}
 
 /* Hinnariba */
-.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
 .tabs button[aria-selected="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
 #chart{display:grid;grid-template-columns:36px 1fr;gap:4px}
 #yax{position:relative;height:170px}
@@ -61,7 +61,9 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 #bars.q{gap:1px}
 .bar{flex:1 1 0;min-width:1px;background:var(--pause);border-radius:3px 3px 0 0;position:relative;border:0;padding:0}
 .bar.none{background:var(--line)}
-#tip{min-height:3.6em;margin-bottom:8px;padding:8px 10px;background:var(--bg);border-radius:var(--radius-s);font-size:.9rem}
+#priceSec{position:relative}
+#tip{position:absolute;top:10px;right:16px;width:min(400px,calc(100% - 270px));min-height:3.6em;padding:8px 12px;background:var(--bg);border-radius:var(--radius-s);font-size:.9rem;z-index:3}
+@media (max-width:640px){#tip{position:static;width:auto;margin-bottom:8px}}
 #tip .row{display:flex;justify-content:space-between;gap:8px}
 .bar.heat{background:var(--heat)}
 .bar.past{opacity:.35}
@@ -131,7 +133,7 @@ header h1{font-size:1.35rem}
     <div class="boost" id="boostBox"></div>
   </section>
 
-  <section>
+  <section id="priceSec">
     <h2>Hinnad ja plaan</h2>
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-day="0">Täna</button>
@@ -284,7 +286,11 @@ function showTip(ts){var b=$("bars").querySelector('.bar[data-ts="'+ts+'"]');if(
   var mode=ov?(ov.state?"käsitsi SEES":"käsitsi PAUS"):"automaatne";
   $("tip").innerHTML='<div class="row"><b>'+hhmm(ts)+"–"+hhmm(ts+step)+'</b><b class="num">'+(f===""?"–":r1(+f)+" s/kWh")+'</b></div>'+
     '<div class="row muted"><span>'+reason(src,st)+'</span><span class="num">'+(raw===""?"":"börs "+r1(+raw/10))+'</span></div>'+
-    (fut?'<div class="small">Olek: <b>'+mode+'</b></div>':'<div class="small muted">Möödunud periood</div>')}
+    (fut?'<div class="small">Olek: <b>'+mode+'</b></div>':'<div class="small muted">Möödunud periood</div>')+actualLine(ts,step,st,src)}
+// Jooksva perioodi tegelik olek ajaloost, kui see erineb plaanist
+function actualLine(ts,step,st,src){var t=now();if(!(ts<=t&&t<ts+step))return "";var l=lastHist();if(!l||l.ts<ts)return "";
+  if(l.act===st&&l.src===src)return "";
+  return '<div class="small">Tegelik: <b>'+(l.act?"küte":"paus")+" – "+SRC[l.src].toLowerCase()+'</b> <span class="muted">(seisuga '+hhmm(l.ts)+')</span></div>'}
 function cycleOv(ts){var i=-1;for(var k=0;k<S.overrides.length;k++)if(S.overrides[k].start===ts)i=k;
   if(i<0){if(S.overrides.length>=MAX_OV){toast("Korraga saab määrata kuni "+MAX_OV+" käsitsi perioodi.");return}S.overrides.push({start:ts,state:true})}
   else if(S.overrides[i].state)S.overrides[i].state=false;else S.overrides.splice(i,1);
