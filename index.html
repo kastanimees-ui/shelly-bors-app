@@ -61,10 +61,8 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 #bars.q{gap:1px}
 .bar{flex:1 1 0;min-width:1px;background:var(--pause);border-radius:3px 3px 0 0;position:relative;border:0;padding:0}
 .bar.none{background:var(--line)}
-.tip{position:absolute;top:0;z-index:4;width:236px;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-s);padding:10px 12px;font-size:.88rem;box-shadow:0 2px 10px rgba(0,0,0,.15)}
-.tip .row{display:flex;justify-content:space-between;gap:8px}
-.tip .mode{margin-top:6px}
-.tip button{margin-top:8px;width:100%}
+#tip{min-height:3.6em;margin-bottom:8px;padding:8px 10px;background:var(--bg);border-radius:var(--radius-s);font-size:.9rem}
+#tip .row{display:flex;justify-content:space-between;gap:8px}
 .bar.heat{background:var(--heat)}
 .bar.past{opacity:.35}
 .bar.now{outline:2px solid var(--ink);outline-offset:1px}
@@ -139,7 +137,8 @@ header h1{font-size:1.35rem}
       <button role="tab" aria-selected="true" data-day="0">Täna</button>
       <button role="tab" aria-selected="false" data-day="1">Homme</button>
     </div>
-    <div id="chart"><div id="yax" aria-hidden="true"></div><div id="plot"><div id="grid" aria-hidden="true"></div><div id="bars" aria-label="Perioodide hinnad"></div><div id="tip" class="tip" hidden></div></div></div>
+    <div id="tip" aria-live="polite"></div>
+    <div id="chart"><div id="yax" aria-hidden="true"></div><div id="plot"><div id="grid" aria-hidden="true"></div><div id="bars" aria-label="Perioodide hinnad"></div></div></div>
     <div class="axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
     <div id="barinfo" class="small"></div>
     <div class="legend">
@@ -149,7 +148,7 @@ header h1{font-size:1.35rem}
       <span><i class="sw" style="border-top:2px dotted var(--ink);height:0;width:16px;border-radius:0"></i>Prioriteetaja piir</span>
       <span><b style="color:var(--fjord)">S/P</b> käsitsi SEES/PAUS</span>
     </div>
-    <p class="muted small">Puuduta või vii kursor tulbale, et näha hinda. Tuleviku perioodil vahetab nupp Muuda olekut: automaatne → SEES → PAUS. Plaan arvestab hinnapiire; kaitseajad võivad tegelikku olekut muuta.</p>
+    <p class="muted small">Tuleviku perioodi puudutus vahetab olekut: automaatne → SEES → PAUS. Muudatus salvestub 2 sekundi pärast. Plaan arvestab hinnapiire; kaitseajad võivad tegelikku olekut muuta.</p>
   </section>
 
   <section>
@@ -271,26 +270,25 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
     b.setAttribute("aria-label",hhmm(ts)+" "+(it.f===null?"hind puudub":r1(it.f)+" senti/kWh")+", "+(it.pl.st?"küte lubatud":"paus"));
     var ov=findOv(ts);if(ov){var sp=document.createElement("span");sp.className="ov";sp.textContent=ov.state?"S":"P";b.appendChild(sp)}
     box.appendChild(b)});
-  if(tipTs!==null)showTip(tipTs);
+  if(tipTs!==null)showTip(tipTs);else tipDefault();
   $("barinfo").textContent=cnt?"":(priceErr||(day?"Homseid hindu pole veel. Shelly laadib need kell 15 ja salvestab 15 minuti jooksul.":"Hinnad puuduvad."))}
 
-var tipTs=null,tipPin=false;
+var tipTs=null;
 function reason(src,st){if(src===1)return S.enabled?"Turvarežiim – hind puudub":"Automaatika väljas";if(src===2)return "Boost";
   if(src===3)return st?"Käsitsi: SEES":"Käsitsi: PAUS";if(src===4)return st?"Küte – prioriteetaeg":"Paus – üle prioriteetaja piiri";
   return st?"Küte – hind alla piiri":"Paus – hind üle piiri"}
-function hideTip(){tipTs=null;$("tip").hidden=true}
-function showTip(ts){var b=$("bars").querySelector('.bar[data-ts="'+ts+'"]');if(!b){hideTip();return}tipTs=ts;
+function tipDefault(){$("tip").innerHTML='<span class="muted">Vii kursor tulbale või puuduta seda, et näha hinda.</span>'}
+function hideTip(){tipTs=null;tipDefault()}
+function showTip(ts){var b=$("bars").querySelector('.bar[data-ts="'+ts+'"]');if(!b){tipDefault();return}
   var step=S.resolution*60,f=b.dataset.f,raw=b.dataset.raw,src=+b.dataset.src,st=b.dataset.st==="1",ov=findOv(ts),fut=ts+step>now();
   var mode=ov?(ov.state?"käsitsi SEES":"käsitsi PAUS"):"automaatne";
-  var t=$("tip");t.innerHTML='<div class="row"><b>'+hhmm(ts)+"–"+hhmm(ts+step)+'</b><b class="num">'+(f===""?"–":r1(+f)+" s/kWh")+'</b></div>'+
+  $("tip").innerHTML='<div class="row"><b>'+hhmm(ts)+"–"+hhmm(ts+step)+'</b><b class="num">'+(f===""?"–":r1(+f)+" s/kWh")+'</b></div>'+
     '<div class="row muted"><span>'+reason(src,st)+'</span><span class="num">'+(raw===""?"":"börs "+r1(+raw/10))+'</span></div>'+
-    (fut?'<div class="mode">Olek: <b>'+mode+'</b></div><button type="button" id="tipBtn">Muuda</button>':'<div class="mode muted small">Möödunud periood</div>');
-  t.hidden=false;var w=$("plot").clientWidth,tw=t.offsetWidth,x=b.offsetLeft+b.offsetWidth/2-tw/2;t.style.left=Math.max(0,Math.min(w-tw,x))+"px";
-  var btn=$("tipBtn");if(btn)btn.onclick=function(e){e.stopPropagation();cycleOv(ts)}}
+    (fut?'<div class="small">Olek: <b>'+mode+'</b></div>':'<div class="small muted">Möödunud periood</div>')}
 function cycleOv(ts){var i=-1;for(var k=0;k<S.overrides.length;k++)if(S.overrides[k].start===ts)i=k;
   if(i<0){if(S.overrides.length>=MAX_OV){toast("Korraga saab määrata kuni "+MAX_OV+" käsitsi perioodi.");return}S.overrides.push({start:ts,state:true})}
   else if(S.overrides[i].state)S.overrides[i].state=false;else S.overrides.splice(i,1);
-  tipPin=true;markDirty(2000);renderBars()}
+  tipTs=ts;markDirty(2000);renderBars()}
 
 function renderState(){var t=now(),res=S.resolution,ps=t-((t+tzOff(t))%(res*60));var raw=periodRaw(ps,res),pl=plan(ps,raw);
   var last=lastHist();var box=$("state");
@@ -351,7 +349,7 @@ function renderForm(){var f=$("form");f.innerHTML="";var fs=null;
     if(d.t==="sel"){inp=document.createElement("select");d.o.forEach(function(o){var op=document.createElement("option");op.value=o[0];op.textContent=o[1];if(String(o[0])===String(v))op.selected=true;inp.appendChild(op)})}
     else{inp=document.createElement("input");inp.type=d.t==="bool"?"checkbox":d.t==="time"?"time":"number";
       if(d.t==="bool")inp.checked=!!v;else{inp.value=v;if(d.st)inp.step=d.st;if(d.t==="num")inp.inputMode="decimal"}}
-    inp.id=id;inp.onchange=function(){var nv=d.t==="bool"?inp.checked:d.t==="num"?parseFloat(String(inp.value).replace(",",".")):d.num?+inp.value:inp.value;setK(S,d.k,nv);markDirty(d.t==="num"||d.t==="time"?300:2000);renderAll(true)};
+    inp.id=id;inp.onchange=function(){var nv=d.t==="bool"?inp.checked:d.t==="num"?parseFloat(String(inp.value).replace(",",".")):d.num?+inp.value:inp.value;var old=getK(S,d.k);setK(S,d.k,nv);if(d.k==="resolution"&&old!==nv&&S.overrides.length){S.overrides=[];toast("Käsitsi perioodid eemaldati, sest perioodi pikkus muutus.")}markDirty(d.t==="num"||d.t==="time"?300:2000);renderAll(true)};
     row.appendChild(inp);
     var hb=document.createElement("button");hb.type="button";hb.className="help";hb.textContent="?";hb.setAttribute("aria-label","Selgitus: "+d.l);
     var ht=document.createElement("p");ht.className="helptext";ht.hidden=true;ht.textContent=d.h;
@@ -366,7 +364,7 @@ function showErrs(e){document.querySelectorAll(".field").forEach(function(r){r.c
   var fe=$("formErr");fe.textContent=e.length?"Salvestamata: paranda punasega märgitud väärtused."+(other.length?" "+other.join(". "):""):"";fe.hidden=!e.length}
 function markDirty(delay){dirty=true;var e=validate(S);showErrs(e);clearTimeout(saveT);saveT=null;
   if(e.length)return;saveT=setTimeout(function(){saveT=null;save()},delay===undefined?2000:delay)}
-function cleanOv(){var t=now(),len=S.resolution*60;S.overrides=S.overrides.filter(function(o){return o.start+len>t})}
+function cleanOv(){var t=now(),len=S.resolution*60;S.overrides=S.overrides.filter(function(o){return o.start+len>t&&((o.start-midnight(o.start))%len)===0})}
 function save(msg){if(saving){again=true;return Promise.resolve()}
   cleanOv();var e=validate(S);showErrs(e);if(e.length)return Promise.resolve();
   var text=JSON.stringify(S,null,2);if(text===S0){dirty=false;return Promise.resolve()}
@@ -381,7 +379,7 @@ function setBoost(until){S.boostUntil=until;clearTimeout(saveT);saveT=null;save(
 // ---------- Laadimine ----------
 function renderAll(keepForm){if(!S)return;renderState();renderBars();renderHist();if(!keepForm)renderForm()}
 function load(){if(saveT||saving)return;
-  return getFile("settings.json").then(function(f){sha=f.sha;S0=f.text;S=JSON.parse(f.text);if(!Array.isArray(S.overrides))S.overrides=[];dirty=false;showErrs([]);
+  return getFile("settings.json").then(function(f){sha=f.sha;S0=f.text;S=JSON.parse(f.text);if(!Array.isArray(S.overrides))S.overrides=[];dirty=false;showErrs([]);var n0=S.overrides.length;cleanOv();if(S.overrides.length!==n0)markDirty(500);
       $("login").hidden=true;$("app").hidden=false;renderAll()})
     .catch(function(err){if(err.message==="auth"){localStorage.removeItem("sb_token");token="";showLogin("Token ei kehti või puudub õigus.")}else toast("Seadete laadimine ebaõnnestus: "+err.message);throw err})
     .then(function(){return Promise.allSettled([
@@ -396,12 +394,12 @@ function showLogin(msg){$("app").hidden=true;$("login").hidden=false;$("loginErr
 $("tokenSave").onclick=function(){var t=$("tokenIn").value.trim();if(!t)return;token=t;localStorage.setItem("sb_token",t);$("tokenIn").value="";load()};
 $("logout").onclick=function(){if(!confirm("Eemaldada token sellest seadmest?"))return;localStorage.removeItem("sb_token");token="";showLogin()};
 $("reload").onclick=function(){if(token)load()};
-$("bars").onclick=function(e){var b=e.target.closest(".bar");if(!b)return;e.stopPropagation();tipPin=true;showTip(+b.dataset.ts)};
-$("bars").onmouseover=function(e){if(tipPin)return;var b=e.target.closest(".bar");if(b)showTip(+b.dataset.ts)};
-$("plot").onmouseleave=function(){if(!tipPin)hideTip()};
-$("tip").onclick=function(e){e.stopPropagation()};
-document.addEventListener("click",function(e){if(!$("plot").contains(e.target)){tipPin=false;hideTip()}});
-document.querySelectorAll(".tabs button").forEach(function(b){b.onclick=function(){day=+b.dataset.day;tipPin=false;hideTip();document.querySelectorAll(".tabs button").forEach(function(x){x.setAttribute("aria-selected",String(x===b))});renderBars();$("barinfo").textContent=$("barinfo").textContent}});
+$("bars").onclick=function(e){var b=e.target.closest(".bar");if(!b)return;e.stopPropagation();var ts=+b.dataset.ts;
+  if(ts+S.resolution*60>now())cycleOv(ts);else{tipTs=ts;showTip(ts)}};
+$("bars").onmouseover=function(e){var b=e.target.closest(".bar");if(b)showTip(+b.dataset.ts)};
+$("plot").onmouseleave=function(){if(tipTs!==null)showTip(tipTs);else tipDefault()};
+document.addEventListener("click",function(e){if(!$("plot").contains(e.target)&&!$("tip").contains(e.target))hideTip()});
+document.querySelectorAll(".tabs button").forEach(function(b){b.onclick=function(){day=+b.dataset.day;hideTip();document.querySelectorAll(".tabs button").forEach(function(x){x.setAttribute("aria-selected",String(x===b))});renderBars();$("barinfo").textContent=$("barinfo").textContent}});
 setInterval(function(){if(token&&!dirty&&!document.hidden)load()},5*60*1000);
 document.addEventListener("visibilitychange",function(){if(document.hidden)flush()});
 if(token)load();else showLogin();
