@@ -171,7 +171,7 @@ var SRC={1:"Turvarežiim",2:"Boost",3:"Käsitsi",4:"Prioriteetaeg",5:"Börs",6:"
 var MAX_OV=10;
 
 var token=localStorage.getItem("sb_token")||"";
-var S=null, S0="", sha=null, H=null, prices={}, day=0, dirty=false;
+var S=null, S0="", sha=null, H=null, prices={}, day=0, dirty=false, priceErr="";
 
 function $(id){return document.getElementById(id)}
 function toast(t){var el=$("toast");el.textContent=t;el.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(function(){el.style.display="none"},3500)}
@@ -243,7 +243,7 @@ function renderBars(){var box=$("bars");box.innerHTML="";if(!S)return;
     box.appendChild(b);if(raw!==null)cnt++}
   var max=0;box.querySelectorAll(".bar").forEach(function(b){var f=parseFloat(b.dataset.f);if(f>max)max=f});
   box.querySelectorAll(".bar").forEach(function(b){var f=parseFloat(b.dataset.f);b.style.height=(isNaN(f)?4:Math.max(4,f/(max||1)*150))+"px"});
-  $("barinfo").textContent=cnt?"":(day?"Homseid hindu pole veel avaldatud (tavaliselt kella 14–15 paiku).":"Hinnad puuduvad.")}
+  $("barinfo").textContent=cnt?"":(priceErr||(day?"Homseid hindu pole veel. Shelly laadib need kell 15 ja salvestab 15 minuti jooksul.":"Hinnad puuduvad."))}
 
 function onBar(e){var b=e.target.closest(".bar");if(!b)return;var ts=+b.dataset.ts,f=b.dataset.f;
   $("barinfo").textContent=hhmm(ts)+" – "+(f===""?"hind puudub":r1(+f)+" s/kWh")+" · "+SRC[b.dataset.src];
@@ -336,8 +336,11 @@ function load(){if(dirty&&!confirm("Salvestamata muudatused lähevad kaotsi. Jä
       $("login").hidden=true;$("app").hidden=false;renderAll()})
     .catch(function(err){if(err.message==="auth"){localStorage.removeItem("sb_token");token="";showLogin("Token ei kehti või puudub õigus.")}else toast("Seadete laadimine ebaõnnestus: "+err.message);throw err})
     .then(function(){return Promise.allSettled([
-      getFile("history.json").then(function(f){var o=JSON.parse(f.text);H=(o&&o.v===1&&typeof o.s==="string")?o:null}).catch(function(){H=null}),
-      loadPrices().catch(function(e){$("barinfo").textContent="Eleringi hindu ei õnnestunud laadida ("+e.message+")."})])})
+      getFile("history.json").then(function(f){var o=JSON.parse(f.text);H=(o&&o.v===1&&typeof o.s==="string")?o:null}).catch(function(){H=null})])})
+    .then(function(){
+      // Hinnad eelistatult Shellylt (history.json), muidu Eleringist
+      priceErr="";if(H&&typeof H.p==="string"&&H.pm){prices={};for(var i=0;i*3<H.p.length;i++){var j=i*3,n=(E.indexOf(H.p.charAt(j))<<12)|(E.indexOf(H.p.charAt(j+1))<<6)|E.indexOf(H.p.charAt(j+2));if(n>0)prices[H.pm+i*900]=(n-100001)/10}return}
+      return loadPrices().catch(function(e){priceErr="Hindu ei õnnestunud laadida: Shelly pole neid veel salvestanud ja Eleringi päring ebaõnnestus ("+e.message+")."})})
     .then(function(){renderAll(true)})}
 function showLogin(msg){$("app").hidden=true;$("login").hidden=false;$("loginErr").textContent=msg||""}
 
