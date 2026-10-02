@@ -24,7 +24,8 @@ html,body{margin:0;background:var(--bg);color:var(--ink)}
 body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);font-size:17px;line-height:1.45}
 main{max-width:720px;margin:0 auto;padding:16px}
 h1,h2,h3{margin:0;line-height:1.2}
-h2{font-size:1.15rem;margin-bottom:10px}
+h2{font-size:1.15rem;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+h2 .help{width:26px;height:26px;font-size:.9rem}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:var(--radius-s);padding:8px 14px}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--fjord);outline-offset:2px}
@@ -41,7 +42,8 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 #state.heat .label{color:var(--heat-text)}
 #state .price{font-size:2.1rem;font-weight:700;text-align:right}
 #state .price small{font-size:.95rem;font-weight:400;color:var(--muted)}
-.boost{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.boost{display:flex;gap:6px;flex-wrap:nowrap;margin-top:14px}
+.boost button{flex:1 1 0;min-width:0;padding:7px 6px;font-size:.92rem;white-space:nowrap}
 .boost .on{background:var(--heat);border-color:var(--heat);color:var(--heat-ink);font-weight:700}
 
 /* Hinnariba */
@@ -112,12 +114,6 @@ header h1{font-size:1.35rem}
 </head>
 <body>
 <main>
-<header>
-  <h1>Börsiküte</h1>
-  <div>
-    <button id="reload" title="Laadi uuesti">Värskenda</button>
-  </div>
-</header>
 
 <section id="login" hidden>
   <h2>Ühenda GitHubiga</h2>
@@ -140,7 +136,7 @@ header h1{font-size:1.35rem}
   </section>
 
   <section id="priceSec">
-    <h2>Hinnad ja plaan</h2>
+    <h2>Hinnad ja plaan <button type="button" class="help" id="chartHelpBtn" aria-expanded="false" aria-controls="chartHelp" aria-label="Graafiku selgitus">?</button></h2>
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-day="0">Täna</button>
       <button role="tab" aria-selected="false" data-day="1">Homme</button>
@@ -149,6 +145,7 @@ header h1{font-size:1.35rem}
     <div id="chart"><div id="yax" aria-hidden="true"></div><div id="plot"><div id="grid" aria-hidden="true"></div><div id="bars" aria-label="Perioodide hinnad"></div></div></div>
     <div class="axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
     <div id="barinfo" class="small"></div>
+    <div id="chartHelp" hidden>
     <div class="legend">
       <span><i class="sw" style="background:var(--heat)"></i>Küte lubatud</span>
       <span><i class="sw" style="background:var(--pause)"></i>Paus</span>
@@ -158,6 +155,7 @@ header h1{font-size:1.35rem}
       <span><b style="color:var(--fjord)">S/P</b> käsitsi SEES/PAUS</span>
     </div>
     <p class="muted small">Puuduta tulpa, et see valida, ja vajuta „Muuda“, et vahetada tuleviku perioodi olekut: automaatne → SEES → PAUS. Valik vabaneb 5 sekundit pärast viimast vajutust või klõpsuga mujal ning muudatus salvestatakse. Plaan arvestab hinnapiire; kaitseajad võivad tegelikku olekut muuta.</p>
+    </div>
   </section>
 
   <section>
@@ -316,7 +314,7 @@ function renderState(){var t=now(),res=S.resolution,ps=t-((t+tzOff(t))%(res*60))
   $("stSrc").textContent=last?("Allikas: "+SRC[last.src]):"Shelly olek pole veel teada";
   $("stTime").textContent=last?("Seisuga "+hhmm(last.ts)):"";
   var bb=$("boostBox");bb.innerHTML="";var on=S.boostUntil>t;
-  if(on){var x=document.createElement("button");x.className="on";x.textContent="Boost kuni "+hhmm(S.boostUntil)+" – lõpeta";x.onclick=function(){setBoost(0)};bb.appendChild(x)}
+  if(on){var x=document.createElement("button");x.className="on";x.textContent="Lõpeta "+hhmm(S.boostUntil);x.title="Boost kestab kuni "+hhmm(S.boostUntil)+". Vajuta, et lõpetada.";x.onclick=function(){setBoost(0)};bb.appendChild(x)}
   [1,2,3].forEach(function(h){var x=document.createElement("button");x.textContent="Boost "+h+" h";x.onclick=function(){setBoost(t+h*3600)};bb.appendChild(x)})}
 
 // Ajalugu: märk = allikas*4 + plaanitud*2 + tegelik
@@ -418,7 +416,7 @@ function showLogin(msg){$("app").hidden=true;$("login").hidden=false;$("loginErr
 
 $("tokenSave").onclick=function(){var t=$("tokenIn").value.trim();if(!t)return;token=t;localStorage.setItem("sb_token",t);$("tokenIn").value="";load()};
 $("logout").onclick=function(){if(!confirm("Eemaldada token sellest seadmest?"))return;localStorage.removeItem("sb_token");token="";showLogin()};
-$("reload").onclick=function(){if(token)load()};
+$("chartHelpBtn").onclick=function(e){e.stopPropagation();var h=$("chartHelp");h.hidden=!h.hidden;this.setAttribute("aria-expanded",String(!h.hidden))};
 $("bars").onclick=function(e){var b=e.target.closest(".bar");if(!b)return;e.stopPropagation();select(+b.dataset.ts)};
 $("bars").onmouseover=function(e){if(selTs!==null)return;var b=e.target.closest(".bar");if(b)showTip(+b.dataset.ts,false)};
 $("plot").onmouseleave=function(){if(selTs===null&&S)showTip(curTs(),false)};
