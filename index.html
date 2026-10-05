@@ -59,7 +59,9 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 .gl.zero{border-top:2px solid var(--muted)}
 .lim{position:absolute;left:0;right:0;border-top:2px dashed var(--fjord);z-index:2;pointer-events:none}
 .limp{position:absolute;border-top:2px dotted var(--ink);z-index:2;pointer-events:none}
-#bars{position:absolute;inset:0;display:flex;gap:2px}
+#bars{position:absolute;inset:0;display:flex;gap:2px;touch-action:pan-y;-webkit-user-select:none;user-select:none}
+.col.hov{background:rgba(127,127,127,.14)}
+.col.hov .bar{filter:brightness(.88)}
 #bars.q{gap:1px}
 .col{flex:1 1 0;min-width:1px;height:100%;position:relative;border:0;padding:0;margin:0;background:transparent;border-radius:3px;cursor:pointer}
 .col:hover{background:rgba(127,127,127,.08)}
@@ -426,7 +428,17 @@ function showLogin(msg){$("app").hidden=true;$("login").hidden=false;$("loginErr
 $("tokenSave").onclick=function(){var t=$("tokenIn").value.trim();if(!t)return;token=t;localStorage.setItem("sb_token",t);$("tokenIn").value="";load()};
 $("logout").onclick=function(){if(!confirm("Eemaldada token sellest seadmest?"))return;localStorage.removeItem("sb_token");token="";showLogin()};
 $("chartHelpBtn").onclick=function(e){e.stopPropagation();var h=$("chartHelp");h.hidden=!h.hidden;this.setAttribute("aria-expanded",String(!h.hidden))};
-$("bars").onclick=function(e){var b=e.target.closest(".col");if(!b)return;e.stopPropagation();select(+b.dataset.ts)};
+// Telefon: sõrmega üle tulpade lohistamine näitab infot, sõrme tõstmine valib tulba
+var drag=null,noClick=false;
+function clearHov(){var x=$("bars").querySelectorAll(".col.hov");for(var i=0;i<x.length;i++)x[i].classList.remove("hov")}
+function scrub(e){var el=document.elementFromPoint(e.clientX,e.clientY),col=el&&el.closest?el.closest(".col"):null;
+  if(!col||!$("bars").contains(col))return;var ts=+col.dataset.ts;if(ts===drag.ts)return;drag.ts=ts;clearHov();col.classList.add("hov");showTip(ts,false)}
+$("bars").addEventListener("pointerdown",function(e){if(e.pointerType!=="touch")return;drag={ts:null};scrub(e)});
+$("bars").addEventListener("pointermove",function(e){if(drag&&e.pointerType==="touch")scrub(e)});
+$("bars").addEventListener("pointerup",function(e){if(!drag)return;scrub(e);var ts=drag.ts;drag=null;clearHov();
+  noClick=true;setTimeout(function(){noClick=false},500);if(ts!==null)select(ts)});
+$("bars").addEventListener("pointercancel",function(){if(!drag)return;drag=null;clearHov();showTip(selTs!==null?selTs:curTs(),selTs!==null)});
+$("bars").onclick=function(e){if(noClick){e.stopPropagation();return}var b=e.target.closest(".col");if(!b)return;e.stopPropagation();select(+b.dataset.ts)};
 $("bars").onmouseover=function(e){if(selTs!==null)return;var b=e.target.closest(".col");if(b)showTip(+b.dataset.ts,false)};
 $("plot").onmouseleave=function(){if(selTs===null&&S)showTip(curTs(),false)};
 document.addEventListener("click",function(e){if(!$("bars").contains(e.target)&&!$("tip").contains(e.target))release()});
