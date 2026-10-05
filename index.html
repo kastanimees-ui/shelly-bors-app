@@ -59,9 +59,12 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 .gl.zero{border-top:2px solid var(--muted)}
 .lim{position:absolute;left:0;right:0;border-top:2px dashed var(--fjord);z-index:2;pointer-events:none}
 .limp{position:absolute;border-top:2px dotted var(--ink);z-index:2;pointer-events:none}
-#bars{position:absolute;inset:0;display:flex;align-items:flex-end;gap:2px}
+#bars{position:absolute;inset:0;display:flex;gap:2px}
 #bars.q{gap:1px}
-.bar{flex:1 1 0;min-width:1px;background:var(--pause);border-radius:3px 3px 0 0;position:relative;border:0;padding:0}
+.col{flex:1 1 0;min-width:1px;height:100%;position:relative;border:0;padding:0;margin:0;background:transparent;border-radius:3px;cursor:pointer}
+.col:hover{background:rgba(127,127,127,.08)}
+.col:hover .bar{filter:brightness(.93)}
+.bar{position:absolute;left:0;right:0;display:block;background:var(--pause);border-radius:3px 3px 0 0}
 .bar.none{background:var(--line)}
 .bar.neg{border-radius:0 0 3px 3px}
 .bar.prio{background:var(--prio)}
@@ -278,7 +281,7 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
       p.style.left=(i0/n*100)+"%";p.style.width=((i-i0)/n*100)+"%";p.style.bottom=y(S.price.priorityLimit)+"px";if(S.price.priorityLimit<=hi)grid.appendChild(p);i0=-1}}
   if(t>=m&&t<end){var nl=document.createElement("div");nl.className="nowline";nl.style.left=((t-m)/(end-m)*100)+"%";grid.appendChild(nl)}
   box.className=res===15?"q":"";
-  items.forEach(function(it){var b=document.createElement("button"),ts=it.ts;
+  items.forEach(function(it){var col=document.createElement("button"),b=document.createElement("span"),ts=it.ts;col.type="button";col.className="col";col.dataset.ts=ts;
     var past=ts+step<=t,h=past?histAt(ts,step):null,cls;
     if(it.f===null)cls=" none";else if(h&&h.n)cls=(h.act?" heat":"")+(h.miss?" miss":"");else if(!past&&it.pr&&it.f>S.price.limit)cls=" prio";else cls=it.pl.st?" heat":"";
     b.className="bar"+cls+(it.f!==null&&it.f<0?" neg":"")+(past?" past":"")+(ts===selTs?" sel":"");
@@ -286,10 +289,10 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
     b.dataset.ts=ts;b.dataset.f=it.f===null?"":it.f;b.dataset.raw=it.raw===null?"":it.raw;b.dataset.st=it.pl.st?1:0;b.dataset.src=it.pl.src;
     var y0=y(0),bh,bb;
     if(it.f===null){bh=2;bb=y0}else if(it.f>=0){bh=Math.max(2,y(Math.max(it.f,1))-y0);bb=y0}else{bh=Math.max(2,y0-y(Math.min(it.f,-1)));bb=y0-bh}
-    b.style.height=bh+"px";b.style.marginBottom=bb+"px";
-    b.setAttribute("aria-label",hhmm(ts)+" "+(it.f===null?"hind puudub":r1(it.f)+" senti/kWh")+", "+(it.pl.st?"küte lubatud":"paus"));
+    b.style.height=bh+"px";b.style.bottom=bb+"px";
+    col.setAttribute("aria-label",hhmm(ts)+" "+(it.f===null?"hind puudub":r1(it.f)+" senti/kWh")+", "+(it.pl.st?"küte lubatud":"paus"));
     var ov=findOv(ts);if(ov){var sp=document.createElement("span");sp.className="ov";sp.textContent=ov.state?"S":"P";b.appendChild(sp)}
-    box.appendChild(b)});
+    col.appendChild(b);box.appendChild(col)});
   showTip(selTs!==null?selTs:curTs(),selTs!==null);
   $("barinfo").textContent=cnt?"":(dayOff<0?(dayDone[m]===2?"Selle päeva hinnad puuduvad (päevafaili pole).":"Laadin hindu…"):dayOff>0?"Homseid hindu pole veel. Shelly laadib need kell 15.":(priceErr||"Hinnad puuduvad."))}
 function dayLabel(k){return ["Üleeile","Eile","Täna","Homme"][k+2]}
@@ -423,8 +426,8 @@ function showLogin(msg){$("app").hidden=true;$("login").hidden=false;$("loginErr
 $("tokenSave").onclick=function(){var t=$("tokenIn").value.trim();if(!t)return;token=t;localStorage.setItem("sb_token",t);$("tokenIn").value="";load()};
 $("logout").onclick=function(){if(!confirm("Eemaldada token sellest seadmest?"))return;localStorage.removeItem("sb_token");token="";showLogin()};
 $("chartHelpBtn").onclick=function(e){e.stopPropagation();var h=$("chartHelp");h.hidden=!h.hidden;this.setAttribute("aria-expanded",String(!h.hidden))};
-$("bars").onclick=function(e){var b=e.target.closest(".bar");if(!b)return;e.stopPropagation();select(+b.dataset.ts)};
-$("bars").onmouseover=function(e){if(selTs!==null)return;var b=e.target.closest(".bar");if(b)showTip(+b.dataset.ts,false)};
+$("bars").onclick=function(e){var b=e.target.closest(".col");if(!b)return;e.stopPropagation();select(+b.dataset.ts)};
+$("bars").onmouseover=function(e){if(selTs!==null)return;var b=e.target.closest(".col");if(b)showTip(+b.dataset.ts,false)};
 $("plot").onmouseleave=function(){if(selTs===null&&S)showTip(curTs(),false)};
 document.addEventListener("click",function(e){if(!$("bars").contains(e.target)&&!$("tip").contains(e.target))release()});
 $("dPrev").onclick=function(e){e.stopPropagation();goDay(-1)};
