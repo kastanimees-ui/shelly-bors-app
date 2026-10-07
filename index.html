@@ -269,12 +269,12 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
   for(var ts=m;ts<end;ts+=step){var raw=periodRaw(ts,res);items.push({ts:ts,raw:raw,f:raw===null?null:fp(raw),pl:plan(ts,raw),pr:inPrio(ts)})}
   var cnt=0,mx=S.price.limit,mn=0,anyPr=false;
   items.forEach(function(it){if(it.pr)anyPr=true;if(it.f!==null){cnt++;if(it.f>mx)mx=it.f;if(it.f<mn)mn=it.f}});
-  // Tulbad algavad nulljoonest; |hind| < 1 joonistatakse 1 ühiku kõrgusena
+  // Tulbad algavad nulljoonest; |hind| < 0,5 joonistatakse 0,5 ühiku kõrgusena; miinuspoolel telge ei näidata
   var st=(mx-mn)<=40?5:10,hi=Math.max(1,Math.ceil(mx/st)*st),lo=0;
-  if(mn<0)lo=(-mn<=st)?-Math.max(1,Math.ceil(-mn)):Math.floor(mn/st)*st;
+  if(mn<0)lo=-Math.max(0.5,Math.ceil(-mn*2)/2);
   var PH=150;function y(v){return (v-lo)/(hi-lo)*PH}
   var u=document.createElement("div");u.className="yu";u.textContent="s/kWh";yax.appendChild(u);
-  var vs=[];for(var v=Math.ceil(lo/st)*st;v<=hi+1e-9;v+=st)vs.push(v);if(lo<0&&vs.indexOf(lo)<0)vs.unshift(lo);
+  var vs=[];for(var v=0;v<=hi+1e-9;v+=st)vs.push(v);
   vs.forEach(function(v){var g=document.createElement("div");g.className="gl"+(v===0&&lo<0?" zero":"");g.style.bottom=y(v)+"px";grid.appendChild(g);
     if(y(v)<PH-14||v===hi){var l=document.createElement("div");l.className="yl";l.style.bottom=y(v)+"px";l.textContent=v;yax.appendChild(l)}});
   var lm=document.createElement("div");lm.className="lim";lm.style.bottom=y(S.price.limit)+"px";lm.title="Hinnapiir "+r1(S.price.limit);grid.appendChild(lm);
@@ -290,7 +290,7 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
     if(h&&h.n){b.dataset.hact=h.act?1:0;b.dataset.hsrc=h.src}
     b.dataset.ts=ts;b.dataset.f=it.f===null?"":it.f;b.dataset.raw=it.raw===null?"":it.raw;b.dataset.st=it.pl.st?1:0;b.dataset.src=it.pl.src;
     var y0=y(0),bh,bb;
-    if(it.f===null){bh=2;bb=y0}else if(it.f>=0){bh=Math.max(2,y(Math.max(it.f,1))-y0);bb=y0}else{bh=Math.max(2,y0-y(Math.min(it.f,-1)));bb=y0-bh}
+    if(it.f===null){bh=2;bb=y0}else if(it.f>=0){bh=Math.max(2,y(Math.max(it.f,0.5))-y0);bb=y0}else{bh=Math.max(2,y0-y(Math.min(it.f,-0.5)));bb=y0-bh}
     b.style.height=bh+"px";b.style.bottom=bb+"px";
     col.setAttribute("aria-label",hhmm(ts)+" "+(it.f===null?"hind puudub":r1(it.f)+" senti/kWh")+", "+(it.pl.st?"küte lubatud":"paus"));
     var ov=findOv(ts);if(ov){var sp=document.createElement("span");sp.className="ov";sp.textContent=ov.state?"S":"P";b.appendChild(sp)}
