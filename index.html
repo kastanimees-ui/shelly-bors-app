@@ -37,12 +37,16 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 .num{font-variant-numeric:tabular-nums}
 
 /* Olekupaneel */
-#state{display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:end}
-#state .label{font-size:2.1rem;font-weight:700;letter-spacing:-.01em}
-#state.heat .label{color:var(--heat-text)}
-#state .price{font-size:2.1rem;font-weight:700;text-align:right}
-#state .price small{font-size:.95rem;font-weight:400;color:var(--muted)}
-.boost{display:flex;gap:6px;flex-wrap:nowrap;margin-top:14px}
+#mainCard .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+#mainCard .tl{display:flex;align-items:center;gap:12px}
+#mainCard .tr{display:flex;align-items:baseline;gap:12px}
+#mainCard .label{font-size:2.1rem;font-weight:700;letter-spacing:-.01em}
+#mainCard.heat .label{color:var(--heat-text)}
+#mainCard .price{font-size:2.1rem;font-weight:700}
+#mainCard .price small{font-size:.95rem;font-weight:400;color:var(--muted)}
+#mainCard .help{width:28px;height:28px;font-size:.9rem}
+.mid{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;margin:14px 0 8px}
+.boost{display:flex;gap:6px;flex-wrap:nowrap;margin-top:16px}
 .boost button{flex:1 1 0;min-width:0;padding:7px 6px;font-size:.92rem;white-space:nowrap}
 .boost .on{background:var(--heat);border-color:var(--heat);color:var(--heat-ink);font-weight:700}
 
@@ -72,15 +76,15 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 .bar.prio{background:var(--prio)}
 .bar.miss{background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.22) 0 3px,transparent 3px 6px)}
 .nowline{position:absolute;top:0;bottom:0;width:0;border-left:1px solid var(--muted);opacity:.5;pointer-events:none}
-.daynav{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.daynav{display:flex;align-items:center;gap:10px}
 .daynav button{width:40px;padding:5px 0;font-size:1.2rem;line-height:1}
 #dLabel{min-width:8.5em;font-weight:700}
-#priceSec{position:relative}
-#tip{position:absolute;top:10px;right:16px;width:min(400px,calc(100% - 270px));min-height:3.6em;padding:8px 12px;background:var(--bg);border-radius:var(--radius-s);font-size:.9rem;z-index:3}
-@media (max-width:640px){#tip{position:static;width:auto;margin-bottom:8px}}
+#tip{height:5.6em;overflow:hidden;padding:8px 12px;background:var(--bg);border-radius:var(--radius-s);font-size:.9rem;display:flex;flex-direction:column;justify-content:center}
+@media (max-width:640px){.mid{grid-template-columns:1fr;gap:10px}}
 #tip .row{display:flex;justify-content:space-between;gap:8px}
 #tip .act{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px}
-#tip .act button{padding:5px 16px}
+#tip .act button{padding:3px 14px}
+#tip .ph{visibility:hidden}
 .bar.heat{background:var(--heat)}
 .bar.past{opacity:.6}
 .bar.now{outline:2px solid var(--ink);outline-offset:1px}
@@ -119,7 +123,7 @@ legend{font-weight:700;margin-bottom:8px}
 header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 header h1{font-size:1.35rem}
 #login input{width:100%;padding:10px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--bg);margin:10px 0}
-@media (max-width:480px){.field{grid-template-columns:1fr 110px 34px}#state .label,#state .price{font-size:1.7rem}}
+@media (max-width:480px){.field{grid-template-columns:1fr 110px 34px}#mainCard .label,#mainCard .price{font-size:1.7rem}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -136,20 +140,16 @@ header h1{font-size:1.35rem}
 
 <div id="app" hidden>
   <div id="offline" role="alert" hidden></div>
-  <section id="stateBox">
-    <div id="state">
-      <div class="label" id="stLabel">–</div>
-      <div class="price num" id="stPrice">–</div>
-      <div class="muted small" id="stSrc"></div>
-      <div class="muted small" id="stTime" style="text-align:right"></div>
+  <section id="mainCard">
+    <div class="top">
+      <div class="tl"><span class="label" id="stLabel">–</span><button type="button" class="help" id="chartHelpBtn" aria-expanded="false" aria-controls="chartHelp" aria-label="Graafiku selgitus">?</button></div>
+      <div class="tr"><span class="muted small" id="stTime"></span><span class="price num" id="stPrice">–</span></div>
     </div>
-    <div class="boost" id="boostBox"></div>
-  </section>
-
-  <section id="priceSec">
-    <h2>Hinnad ja plaan <button type="button" class="help" id="chartHelpBtn" aria-expanded="false" aria-controls="chartHelp" aria-label="Graafiku selgitus">?</button></h2>
-    <div class="daynav"><button type="button" id="dPrev" aria-label="Eelmine päev">‹</button><span id="dLabel">Täna</span><button type="button" id="dNext" aria-label="Järgmine päev">›</button></div>
-    <div id="tip" aria-live="polite"></div>
+    <div class="muted small" id="stSrc"></div>
+    <div class="mid">
+      <div class="daynav"><button type="button" id="dPrev" aria-label="Eelmine päev">‹</button><span id="dLabel">Täna</span><button type="button" id="dNext" aria-label="Järgmine päev">›</button></div>
+      <div id="tip" aria-live="polite"></div>
+    </div>
     <div id="chart"><div id="yax" aria-hidden="true"></div><div id="plot"><div id="grid" aria-hidden="true"></div><div id="bars" aria-label="Perioodide hinnad"></div></div></div>
     <div class="axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
     <div id="barinfo" class="small"></div>
@@ -165,6 +165,7 @@ header h1{font-size:1.35rem}
     </div>
     <p class="muted small">Puuduta tulpa, et see valida, ja vajuta „Muuda“, et vahetada tuleviku perioodi olekut: automaatne → SEES → PAUS. Valik vabaneb 5 sekundit pärast viimast vajutust või klõpsuga mujal ning muudatus salvestatakse. Möödunud perioodid on värvitud tegeliku oleku järgi, tulevased plaani järgi. Plaan arvestab hinnapiire; kaitseajad võivad tegelikku olekut muuta. Noolega saab vaadata kuni kahe päeva tagust ajalugu ja homset päeva.</p>
     </div>
+    <div class="boost" id="boostBox"></div>
   </section>
 
 
@@ -320,7 +321,8 @@ function showTip(ts,withBtn){var b=$("bars").querySelector('.bar[data-ts="'+ts+'
   var mode=ov?(ov.state?"käsitsi SEES":"käsitsi PAUS"):"automaatne";
   $("tip").innerHTML='<div class="row"><b>'+hhmm(ts)+"–"+hhmm(ts+step)+'</b><b class="num">'+(f===""?"–":r1(+f)+" s/kWh")+'</b></div>'+
     '<div class="row muted"><span>'+reason(src,st)+'</span><span class="num">'+(raw===""?"":"börs "+r1(+raw/10))+'</span></div>'+
-    (fut?'<div class="act small"><span>Olek: <b>'+mode+'</b></span>'+(withBtn?'<button type="button" id="tipBtn">Muuda</button>':'')+'</div>':(b.dataset.hact!==undefined?'<div class="small">Tegelik: <b>'+(b.dataset.hact==="1"?"küte":"paus")+" – "+(SRC[+b.dataset.hsrc]||"").toLowerCase()+'</b></div>':'<div class="small muted">Möödunud periood, tegelik olek teadmata</div>'))+actualLine(ts,step,st,src);
+    '<div class="act small">'+(fut?'<span>Olek: <b>'+mode+'</b></span>':(b.dataset.hact!==undefined?'<span>Tegelik: <b>'+(b.dataset.hact==="1"?"küte":"paus")+" – "+(SRC[+b.dataset.hsrc]||"").toLowerCase()+'</b></span>':'<span class="muted">Tegelik olek teadmata</span>'))+
+    (fut&&withBtn?'<button type="button" id="tipBtn">Muuda</button>':'<button type="button" class="ph" tabindex="-1" aria-hidden="true">Muuda</button>')+'</div>';
   var btn=$("tipBtn");if(btn)btn.onclick=function(e){e.stopPropagation();cycleOv(ts)}}
 // Jooksva perioodi tegelik olek ajaloost, kui see erineb plaanist
 function actualLine(ts,step,st,src){var t=now();if(!(ts<=t&&t<ts+step))return "";var l=lastHist();if(!l||l.ts<ts)return "";
@@ -332,7 +334,7 @@ function cycleOv(ts){var i=-1;for(var k=0;k<S.overrides.length;k++)if(S.override
   markPending();renderBars();armSel()}
 
 function renderState(){var t=now(),res=S.resolution,ps=t-((t+tzOff(t))%(res*60));var raw=periodRaw(ps,res),pl=plan(ps,raw);
-  var last=lastHist();var box=$("state");
+  var last=lastHist();var box=$("mainCard");
   var st=last?last.act:pl.st;box.className=st?"heat":"";
   $("stLabel").textContent=st?"Küte lubatud":"Paus";
   $("stPrice").innerHTML=raw===null?"–":r1(fp(raw))+" <small>s/kWh</small>";
