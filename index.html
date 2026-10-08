@@ -74,6 +74,8 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 .bar.none{background:var(--line)}
 .bar.neg{border-radius:0 0 3px 3px}
 .bar.prio{background:var(--prio)}
+.bar.prot{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.6) 0 3px,transparent 3px 7px)}
+.bar.pend{outline:2px dashed var(--fjord);outline-offset:1px}
 .bar.miss{background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.22) 0 3px,transparent 3px 6px)}
 .nowline{position:absolute;top:0;bottom:0;width:0;border-left:1px solid var(--muted);opacity:.5;pointer-events:none}
 .daynav{display:flex;align-items:center;gap:10px}
@@ -157,13 +159,15 @@ header h1{font-size:1.35rem}
     <div class="legend">
       <span><i class="sw" style="background:var(--heat)"></i>Küte lubatud</span>
       <span><i class="sw" style="background:var(--pause)"></i>Paus</span>
+      <span><i class="sw" style="background:var(--heat);background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.6) 0 3px,transparent 3px 7px)"></i>Küte kaitseaja tõttu</span>
+      <span><i class="sw" style="outline:2px dashed var(--fjord);outline-offset:1px"></i>Ootab rakendumist</span>
       <span><i class="sw" style="background:var(--prio)"></i>Prioriteetaeg, hind üle hinnapiiri</span>
       <span><i class="sw" style="background:var(--pause);background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.22) 0 3px,transparent 3px 6px)"></i>Tegelik olek erines plaanist</span>
       <span><i class="sw" style="border-top:2px dashed var(--fjord);height:0;width:16px;border-radius:0"></i>Hinnapiir</span>
       <span><i class="sw" style="border-top:2px dotted var(--ink);height:0;width:16px;border-radius:0"></i>Prioriteetaja piir</span>
       <span><b style="color:var(--fjord)">S/P</b> käsitsi SEES/PAUS</span>
     </div>
-    <p class="muted small">Puuduta tulpa, et see valida, ja vajuta „Muuda“, et vahetada tuleviku perioodi olekut: automaatne → SEES → PAUS. Valik vabaneb 5 sekundit pärast viimast vajutust või klõpsuga mujal ning muudatus salvestatakse. Möödunud perioodid on värvitud tegeliku oleku järgi, tulevased plaani järgi. Plaan arvestab hinnapiire; kaitseajad võivad tegelikku olekut muuta. Noolega saab vaadata kuni kahe päeva tagust ajalugu ja homset päeva.</p>
+    <p class="muted small">Puuduta tulpa, et see valida, ja vajuta „Muuda“, et vahetada tuleviku perioodi olekut: automaatne → SEES → PAUS. Valik vabaneb 5 sekundit pärast viimast vajutust või klõpsuga mujal ning muudatus salvestatakse. Möödunud perioodid on värvitud Shelly tegeliku oleku järgi, tulevased Shelly plaani järgi (arvestab ka kaitseaegu). Pärast muudatust on periood katkendjoonega märgitud, kuni Shelly selle kinnitab. Noolega saab vaadata kuni 14 päeva tagust ajalugu ja homset päeva.</p>
     </div>
     <div class="boost" id="boostBox"></div>
   </section>
@@ -190,7 +194,7 @@ var SRC={1:"Turvarežiim",2:"Boost",3:"Käsitsi",4:"Prioriteetaeg",5:"Börs",6:"
 var MAX_OV=10;
 
 var token=localStorage.getItem("sb_token")||"";
-var S=null, S0="", sha=null, H=null, prices={}, dayOff=0, dayDone={}, dirty=false, priceErr="", saveT=null, saving=false, again=false;
+var S=null, S0="", sha=null, H=null, HD=[], plan2={}, appliedRev=-1, pendRev=0, pendT=0, pendTs={}, pollT=null, KEEP=14, prices={}, dayOff=0, dayDone={}, dirty=false, priceErr="", saveT=null, saving=false, again=false;
 
 function $(id){return document.getElementById(id)}
 function toast(t){var el=$("toast");el.textContent=t;el.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(function(){el.style.display="none"},3500)}
@@ -241,11 +245,20 @@ function decodeP(p,base){for(var i=0;i*3<p.length;i++){var j=i*3,n=(E.indexOf(p.
 function ymd(m){return new Date((m+43200)*1000).toISOString().slice(0,10)}
 function dayMid(k){var m0=midnight(now());return k?midnight(m0+k*86400+6*3600):m0}
 // Täna ja homme: prices.json (Shelly kirjutab muutuse korral); vana vorming: history.json p
-function loadPrices(){return getFile("prices.json").then(function(f){var o=JSON.parse(f.text);if(o&&o.p&&o.pm)decodeP(o.p,o.pm)})
+// prices.json: hinnad (p, pm), Shelly plaan (pl alates ps, res minutit) ja rakendatud seadete rev
+function loadPrices(){return getFile("prices.json").then(function(f){var o=JSON.parse(f.text);if(o&&o.p&&o.pm)decodeP(o.p,o.pm);
+    plan2={};if(o&&typeof o.pl==="string"&&o.ps&&o.res){for(var i=0;i<o.pl.length;i++){var v=E.indexOf(o.pl.charAt(i));if(v>0)plan2[o.ps+i*o.res*60]=v}}
+    appliedRev=(o&&typeof o.rev==="number")?o.rev:-1;checkPend()})
   .catch(function(){if(H&&typeof H.p==="string"&&H.pm)decodeP(H.p,H.pm);else priceErr="Hinnad puuduvad (prices.json pole veel loodud)."})}
 // Möödunud päev: prices/AAAA-KK-PP.json
-function loadDay(m){if(dayDone[m])return Promise.resolve();dayDone[m]=1;
-  return getFile("prices/"+ymd(m)+".json").then(function(f){var o=JSON.parse(f.text);if(o&&o.p&&o.m)decodeP(o.p,o.m)}).catch(function(){dayDone[m]=2})}
+// Möödunud päev: tsüklilised päevafailid (14 p) prices/dN.json ja history/dN.json, N = päeva number % 14
+function dayN(m){return Math.floor((m+43200)/86400)%KEEP}
+function loadDay(m){if(dayDone[m])return Promise.resolve();dayDone[m]=1;var n=dayN(m);
+  return Promise.allSettled([
+    getFile("prices/d"+n+".json").then(function(f){var o=JSON.parse(f.text);if(o&&o.p&&o.m===m)decodeP(o.p,o.m);else throw 0}),
+    getFile("history/d"+n+".json").then(function(f){var o=JSON.parse(f.text);if(o&&typeof o.s==="string"&&o.m===m)addHist(m,o.s)})
+  ]).then(function(r){if(r[0].status!=="fulfilled")dayDone[m]=2})}
+function addHist(d0,s){for(var i=0;i<HD.length;i++)if(HD[i].d0===d0){HD[i].s=s;return}HD.push({d0:d0,s:s})}
 function periodRaw(ts,res){if(res===15)return prices[ts]===undefined?null:prices[ts];
   var s=0,n=0;for(var k=0;k<4;k++){var v=prices[ts+k*900];if(v!==undefined){s+=v;n++}}return n?s/n:null}
 function inPrio(ts){var a=hm(S.priority.start),b=hm(S.priority.end);if(a===b)return false;
@@ -260,7 +273,7 @@ function plan(ts,raw){if(!S.enabled)return{st:true,src:1};
   return{st:f<=S.price.limit,src:5}}
 
 // Tegelik olek perioodi kohta ajaloost: n = pesi andmetega, act = enamus kütte, miss = erines plaanist
-function histAt(ts,step){var r={n:0,h:0,miss:false,src:0};if(!H)return r;var i0=Math.round((ts-H.d0)/900);
+function histAt(ts,step){var r={n:0,h:0,miss:false,src:0},e=null;for(var q=0;q<HD.length;q++){var x=HD[q];if(ts>=x.d0&&ts<x.d0+x.s.length*900){e=x;break}}if(!e){r.act=null;return r}var H={d0:e.d0,s:e.s},i0=Math.round((ts-H.d0)/900);
   for(var k=0;k<step/900;k++){var i=i0+k;if(i<0||i>=H.s.length)continue;var v=E.indexOf(H.s.charAt(i));if(v<=0)continue;
     r.n++;if(v&1)r.h++;if(((v>>1)&1)!==(v&1))r.miss=true;r.src=v>>2}
   r.act=r.n?r.h*2>=r.n:null;return r}
@@ -285,8 +298,14 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
   if(t>=m&&t<end){var nl=document.createElement("div");nl.className="nowline";nl.style.left=((t-m)/(end-m)*100)+"%";grid.appendChild(nl)}
   box.className=res===15?"q":"";
   items.forEach(function(it){var col=document.createElement("button"),b=document.createElement("span"),ts=it.ts;col.type="button";col.className="col";col.dataset.ts=ts;
-    var past=ts+step<=t,h=past?histAt(ts,step):null,cls;
-    if(it.f===null)cls=" none";else if(h&&h.n)cls=(h.act?" heat":"")+(h.miss?" miss":"");else if(!past&&it.pr&&it.f>S.price.limit)cls=" prio";else cls=it.pl.st?" heat":"";
+    var past=ts+step<=t,h=past?histAt(ts,step):null,cls,pv=past?0:(plan2[ts]||0);
+    if(pv){it.pl={st:!!((pv>>1)&1),src:pv>>2};it.sh=1}
+    if(it.f===null)cls=" none";
+    else if(h&&h.n)cls=(h.act?(h.src===6?" heat prot":" heat"):"")+(h.miss?" miss":"");
+    else if(it.pl.st&&it.pl.src===6)cls=" heat prot";
+    else if(!past&&it.pr&&it.f>S.price.limit)cls=" prio";
+    else cls=it.pl.st?" heat":"";
+    if(!past&&pendTs[ts]&&pendRev>appliedRev)cls+=" pend";
     b.className="bar"+cls+(it.f!==null&&it.f<0?" neg":"")+(past?" past":"")+(ts===selTs?" sel":"");
     if(h&&h.n){b.dataset.hact=h.act?1:0;b.dataset.hsrc=h.src}
     b.dataset.ts=ts;b.dataset.f=it.f===null?"":it.f;b.dataset.raw=it.raw===null?"":it.raw;b.dataset.st=it.pl.st?1:0;b.dataset.src=it.pl.src;
@@ -298,16 +317,17 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
     col.appendChild(b);box.appendChild(col)});
   showTip(selTs!==null?selTs:curTs(),selTs!==null);
   $("barinfo").textContent=cnt?"":(dayOff<0?(dayDone[m]===2?"Selle päeva hinnad puuduvad (päevafaili pole).":"Laadin hindu…"):dayOff>0?"Homseid hindu pole veel. Shelly laadib need kell 15.":(priceErr||"Hinnad puuduvad."))}
-function dayLabel(k){return ["Üleeile","Eile","Täna","Homme"][k+2]}
+function dayLabel(k){return k===1?"Homme":k===0?"Täna":k===-1?"Eile":k===-2?"Üleeile":(-k)+" p tagasi"}
 function hasTomorrow(){var m=dayMid(1);for(var ts=m;ts<m+86400;ts+=900)if(prices[ts]!==undefined)return true;return false}
 function renderNav(){var m=dayMid(dayOff);$("dLabel").textContent=dayLabel(dayOff)+" · "+dname(m);
-  $("dPrev").disabled=dayOff<=-2;$("dNext").disabled=dayOff>=1||(dayOff===0&&!hasTomorrow())}
-function goDay(d){var k=dayOff+d;if(k<-2||k>1)return;clearTimeout(selT);selT=null;selTs=null;dayOff=k;
+  $("dPrev").disabled=dayOff<=-(KEEP-1);$("dNext").disabled=dayOff>=1||(dayOff===0&&!hasTomorrow())}
+function goDay(d){var k=dayOff+d;if(k<-(KEEP-1)||k>1)return;clearTimeout(selT);selT=null;selTs=null;dayOff=k;
   if(k<0){var m=dayMid(k);renderBars();loadDay(m).then(renderBars)}else renderBars()}
 
 var selTs=null,selT=null,SEL_MS=5000;
 function reason(src,st){if(src===1)return S.enabled?"Turvarežiim – hind puudub":"Automaatika väljas";if(src===2)return "Boost";
   if(src===3)return st?"Käsitsi: SEES":"Käsitsi: PAUS";if(src===4)return st?"Küte – prioriteetaeg":"Paus – üle prioriteetaja piiri";
+  if(src===6)return st?"Küte – kaitseaeg":"Paus – kaitseaeg";
   return st?"Küte – hind alla piiri":"Paus – hind üle piiri"}
 function tipDefault(){$("tip").innerHTML='<span class="muted">Puuduta tulpa, et näha hinda ja muuta olekut.</span>'}
 // Jooksev periood (infokasti vaikimisi sisu)
@@ -321,7 +341,7 @@ function showTip(ts,withBtn){var b=$("bars").querySelector('.bar[data-ts="'+ts+'
   var mode=ov?(ov.state?"käsitsi SEES":"käsitsi PAUS"):"automaatne";
   $("tip").innerHTML='<div class="row"><b>'+hhmm(ts)+"–"+hhmm(ts+step)+'</b><b class="num">'+(f===""?"–":r1(+f)+" s/kWh")+'</b></div>'+
     '<div class="row muted"><span>'+reason(src,st)+'</span><span class="num">'+(raw===""?"":"börs "+r1(+raw/10))+'</span></div>'+
-    '<div class="act small">'+(fut?'<span>Olek: <b>'+mode+'</b></span>':(b.dataset.hact!==undefined?'<span>Tegelik: <b>'+(b.dataset.hact==="1"?"küte":"paus")+" – "+(SRC[+b.dataset.hsrc]||"").toLowerCase()+'</b></span>':'<span class="muted">Tegelik olek teadmata</span>'))+
+    '<div class="act small">'+(fut?(pendTs[ts]&&pendRev>appliedRev?'<span style="color:var(--fjord)"><b>Ootab rakendumist…</b></span>':'<span>Olek: <b>'+mode+'</b></span>'):(b.dataset.hact!==undefined?'<span>Tegelik: <b>'+(b.dataset.hact==="1"?"küte":"paus")+" – "+(SRC[+b.dataset.hsrc]||"").toLowerCase()+'</b></span>':'<span class="muted">Tegelik olek teadmata</span>'))+
     (fut&&withBtn?'<button type="button" id="tipBtn">Muuda</button>':'<button type="button" class="ph" tabindex="-1" aria-hidden="true">Muuda</button>')+'</div>';
   var btn=$("tipBtn");if(btn)btn.onclick=function(e){e.stopPropagation();cycleOv(ts)}}
 // Jooksva perioodi tegelik olek ajaloost, kui see erineb plaanist
@@ -331,21 +351,21 @@ function actualLine(ts,step,st,src){var t=now();if(!(ts<=t&&t<ts+step))return ""
 function cycleOv(ts){var i=-1;for(var k=0;k<S.overrides.length;k++)if(S.overrides[k].start===ts)i=k;
   if(i<0){if(S.overrides.length>=MAX_OV){toast("Korraga saab määrata kuni "+MAX_OV+" käsitsi perioodi.");return}S.overrides.push({start:ts,state:true})}
   else if(S.overrides[i].state)S.overrides[i].state=false;else S.overrides.splice(i,1);
-  markPending();renderBars();armSel()}
+  pendTs[ts]=1;markPending();renderBars();armSel()}
 
 function renderState(){var t=now(),res=S.resolution,ps=t-((t+tzOff(t))%(res*60));var raw=periodRaw(ps,res),pl=plan(ps,raw);
   var last=lastHist();var box=$("mainCard");
   var st=last?last.act:pl.st;box.className=st?"heat":"";
   $("stLabel").textContent=st?"Küte lubatud":"Paus";
   $("stPrice").innerHTML=raw===null?"–":r1(fp(raw))+" <small>s/kWh</small>";
-  $("stSrc").textContent=last?("Allikas: "+SRC[last.src]):"Shelly olek pole veel teada";
+  $("stSrc").textContent=(last?("Allikas: "+SRC[last.src]):"Shelly olek pole veel teada")+(pendRev>appliedRev&&pendRev?" · seaded ootavad rakendumist…":"");
   $("stTime").textContent=last?("Seisuga "+hhmm(last.ts)):"";
   var bb=$("boostBox");bb.innerHTML="";var on=S.boostUntil>t;
   if(on){var x=document.createElement("button");x.className="on";x.textContent="Lõpeta "+hhmm(S.boostUntil);x.title="Boost kestab kuni "+hhmm(S.boostUntil)+". Vajuta, et lõpetada.";x.onclick=function(){setBoost(0)};bb.appendChild(x)}
   [1,2,3].forEach(function(h){var x=document.createElement("button");x.textContent="Boost "+h+" h";x.onclick=function(){setBoost(t+h*3600)};bb.appendChild(x)})}
 
 // Ajalugu: märk = allikas*4 + plaanitud*2 + tegelik
-function lastHist(){if(!H)return null;for(var i=H.s.length-1;i>=0;i--){var v=E.indexOf(H.s.charAt(i));if(v>0)return{ts:H.d0+i*H.n,src:v>>2,pl:!!(v&2),act:!!(v&1)}}return null}
+function lastHist(){if(!H)return null;for(var i=H.s.length-1;i>=0;i--){var v=E.indexOf(H.s.charAt(i));if(v>0)return{ts:H.d0+i*900,src:v>>2,pl:!!(v&2),act:!!(v&1)}}return null}
 // ---------- Seadete vorm ----------
 var FIELDS=[
  {g:"Üldine"},
@@ -399,12 +419,18 @@ function markDirty(delay){dirty=true;var e=validate(S);showErrs(e);clearTimeout(
 function cleanOv(){var t=now(),len=S.resolution*60;S.overrides=S.overrides.filter(function(o){return o.start+len>t&&((o.start-midnight(o.start))%len)===0})}
 function save(msg){if(saving){again=true;return Promise.resolve()}
   cleanOv();var e=validate(S);showErrs(e);if(e.length)return Promise.resolve();
-  var text=JSON.stringify(S,null,2);if(text===S0){dirty=false;return Promise.resolve()}
+  if(JSON.stringify(S,null,2)===S0){dirty=false;return Promise.resolve()}
+  S.rev=(S.rev||0)+1;var text=JSON.stringify(S,null,2);
   saving=true;
-  return putFile("settings.json",text,sha,msg||"seaded").then(function(s){sha=s;S0=text;dirty=false;toast("Salvestatud. Shelly rakendab muudatuse minuti jooksul.")})
+  return putFile("settings.json",text,sha,msg||"seaded").then(function(s){sha=s;S0=text;dirty=false;pendRev=S.rev;pendT=now();startPoll();renderAll(true);toast("Salvestatud. Ootan Shelly kinnitust.")})
    .catch(function(err){if(err.message==="conflict"){toast("Seadeid muudeti vahepeal mujal. Laadisin uuesti, tee muudatus uuesti.");dirty=false;saving=false;load();return}
       toast("Salvestamine ebaõnnestus: "+err.message+". Proovin 30 s pärast uuesti.");clearTimeout(saveT);saveT=setTimeout(function(){saveT=null;save()},30000)})
    .finally(function(){saving=false;if(again){again=false;save()}})}
+// Kinnitus: Shelly kirjutab prices.json faili rakendatud seadete rev; ootamise ajal kontroll iga 30 s
+function startPoll(){if(pollT)return;pollT=setInterval(function(){loadPrices().then(function(){renderAll(true)})},30000)}
+function checkPend(){if(pendRev&&appliedRev>=pendRev){pendRev=0;pendTs={};if(pollT){clearInterval(pollT);pollT=null}}
+  else if(pendRev&&now()-pendT>300&&!checkPend.warned){checkPend.warned=1;toast("Shelly pole muudatust 5 minuti jooksul kinnitanud. Kontrolli Shelly ühendust.")}
+  if(!pendRev)checkPend.warned=0}
 function flush(){clearTimeout(saveT);saveT=null;save()}
 function markPending(){dirty=true;var e=validate(S);showErrs(e);clearTimeout(saveT);saveT=null}
 function setBoost(until){S.boostUntil=until;clearTimeout(saveT);saveT=null;save(until?"boost":"boost lõpp").then(function(){renderAll(true)})}
@@ -416,7 +442,7 @@ function load(){if(saveT||saving)return;
       $("login").hidden=true;$("app").hidden=false;renderAll()})
     .catch(function(err){if(err.message==="auth"){localStorage.removeItem("sb_token");token="";showLogin("Token ei kehti või puudub õigus.")}else toast("Seadete laadimine ebaõnnestus: "+err.message);throw err})
     .then(function(){return Promise.allSettled([
-      getFile("history.json").then(function(f){var o=JSON.parse(f.text);H=(o&&o.v===1&&typeof o.s==="string")?o:null}).catch(function(){H=null})])})
+      getFile("history.json").then(function(f){var o=JSON.parse(f.text);H=null;if(o&&typeof o.s==="string"){if(o.v===2){H={d0:o.d,s:o.s};addHist(o.d,o.s)}else if(o.v===1){H={d0:o.d0,s:o.s};addHist(o.d0,o.s)}}}).catch(function(){H=null})])})
     .then(function(){priceErr="";var p=[loadPrices()];if(dayOff<0)p.push(loadDay(dayMid(dayOff)));return Promise.all(p)})
     .then(function(){renderAll(true);checkShelly()})}
 // Shelly ühendus: history.json viimase commit'i aeg
