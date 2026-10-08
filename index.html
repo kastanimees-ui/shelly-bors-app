@@ -253,7 +253,7 @@ function loadPrices(){return getFile("prices.json").then(function(f){var o=JSON.
 // Möödunud päev: prices/AAAA-KK-PP.json
 // Möödunud päev: tsüklilised päevafailid (14 p) prices/dN.json ja history/dN.json, N = päeva number % 14
 function dayN(m){return Math.floor((m+43200)/86400)%KEEP}
-function loadDay(m){if(dayDone[m])return Promise.resolve();dayDone[m]=1;var n=dayN(m);
+function loadDay(m,force){if(dayDone[m]&&!force)return Promise.resolve();dayDone[m]=1;var n=dayN(m);
   return Promise.allSettled([
     getFile("prices/d"+n+".json").then(function(f){var o=JSON.parse(f.text);if(o&&o.p&&o.m===m)decodeP(o.p,o.m);else throw 0}),
     getFile("history/d"+n+".json").then(function(f){var o=JSON.parse(f.text);if(o&&typeof o.s==="string"&&o.m===m)addHist(m,o.s)})
@@ -443,7 +443,7 @@ function load(){if(saveT||saving)return;
     .catch(function(err){if(err.message==="auth"){localStorage.removeItem("sb_token");token="";showLogin("Token ei kehti või puudub õigus.")}else toast("Seadete laadimine ebaõnnestus: "+err.message);throw err})
     .then(function(){return Promise.allSettled([
       getFile("history.json").then(function(f){var o=JSON.parse(f.text);H=null;if(o&&typeof o.s==="string"){if(o.v===2){H={d0:o.d,s:o.s};addHist(o.d,o.s)}else if(o.v===1){H={d0:o.d0,s:o.s};addHist(o.d0,o.s)}}}).catch(function(){H=null})])})
-    .then(function(){priceErr="";var p=[loadPrices()];if(dayOff<0)p.push(loadDay(dayMid(dayOff)));return Promise.all(p)})
+    .then(function(){priceErr="";var p=[loadPrices(),loadDay(dayMid(0),true)];if(dayOff<0)p.push(loadDay(dayMid(dayOff)));return Promise.all(p)})
     .then(function(){renderAll(true);checkShelly()})}
 // Shelly ühendus: history.json viimase commit'i aeg
 function checkShelly(){return fetch("https://api.github.com/repos/"+OWNER+"/"+REPO+"/commits?path=history.json&per_page=1",{headers:{"Authorization":"Bearer "+token,"Accept":"application/vnd.github+json"},cache:"no-store"})
