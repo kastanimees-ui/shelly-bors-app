@@ -376,7 +376,7 @@ function renderState(){var t=now(),res=S.resolution,ps=t-((t+tzOff(t))%(res*60))
   $("stTime").textContent=last?("Seisuga "+hhmm(last.ts)):"";
   var bb=$("boostBox");bb.innerHTML="";var on=S.boostUntil>t;
   if(on){var x=document.createElement("button");x.className="on";x.textContent="Lõpeta "+hhmm(S.boostUntil);x.title="Boost kestab kuni "+hhmm(S.boostUntil)+". Vajuta, et lõpetada.";x.onclick=function(){setBoost(0)};bb.appendChild(x)}
-  [1,2,3].forEach(function(h){var x=document.createElement("button");x.textContent="Boost "+h+" h";x.onclick=function(){setBoost(t+h*3600)};bb.appendChild(x)})}
+  [1,2,3].forEach(function(h){var x=document.createElement("button");x.textContent="Boost "+h+" h";x.onclick=function(){setBoost(curTs()+h*3600)};bb.appendChild(x)})}
 
 // Ajalugu: märk = allikas*4 + plaanitud*2 + tegelik
 function lastHist(){if(!H)return null;for(var i=H.s.length-1;i>=0;i--){var v=E.indexOf(H.s.charAt(i));if(v>0)return{ts:H.d0+i*900,src:v>>2,pl:!!(v&2),act:!!(v&1)}}return null}
@@ -401,7 +401,7 @@ var FIELDS=[
  {k:"protect.minOnMin",l:"Min tööaeg",t:"num",st:1,h:"Kui küte lülitus sisse, hoitakse seda vähemalt nii kaua. Kaitseb kompressorit lühikeste tsüklite eest."},
  {k:"protect.minOffMin",l:"Min pausiaeg",t:"num",st:1,h:"Kui küte läks pausile, hoitakse pausi vähemalt nii kaua."},
  {k:"protect.maxOffMin",l:"Max pausiaeg",t:"num",st:1,h:"Pikem paus ei ole lubatud: küte lülitatakse sisse ka kõrge hinnaga. 0 = piirangut pole."},
- {k:"smart.shiftMin",l:"Kaitseaja max nihe",t:"num",st:5,def:60,h:"Kui arvutuslikule kaitseajale järgneb odavam periood, võib küte selle võrra hiljem sisse lülituda. Paus on siis kuni nii palju pikem kui max pausiaeg. 0 = paus ei ole kunagi pikem kui max pausiaeg. Kehtib GitHubi plaani (uus süsteem) kohta."},
+ {k:"smart.shiftMin",l:"Kaitseaja nihe (±)",t:"num",st:5,def:60,h:"Kaitseaja küte lülitub odavaimal perioodil, mis jääb arvutuslikust ajast (eelmise kütte lõpp + max pausiaeg) kuni nii palju varasemaks või hilisemaks. Paus on seega max pausiaeg ± see väärtus. 0 = kaitseaeg täpselt max pausiaja järel. Kehtib GitHubi plaani (uus süsteem) kohta."},
  {k:"protect.failsafeOnMin",l:"Turvarežiimi järgne kaitseaeg",t:"num",st:1,def:30,h:"Kui Shelly ei tea hinda (käivitus, internetikatkestus), lubab see kütte (turvarežiim). Kui soojuspump selle ajal käivitub, hoitakse seda vähemalt siin määratud aja töös, et kaitsta kompressorit lühikeste tsüklite eest. 0 = kaitseaeg ei rakendu ja relee lülitub hinna selgumisel kohe pausile."}
 ];
 // 24 h kellaaeg: "6:00", "6.00", "0600" -> "06:00"
