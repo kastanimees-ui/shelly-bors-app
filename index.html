@@ -241,6 +241,7 @@ function validate(o){var e=[],p=o.price||{},q=o.priority||{},t=o.protect||{};
   if(!rng(t.minOnMin,0,1440))x("protect.minOnMin","Väärtus peab olema 0…1440 min");
   if(!rng(t.minOffMin,0,1440))x("protect.minOffMin","Väärtus peab olema 0…1440 min");
   if(!rng(t.maxOffMin,0,1440)||(t.maxOffMin>0&&t.maxOffMin<t.minOffMin))x("protect.maxOffMin","Peab olema 0 või vähemalt min pausiaeg");
+  if(o.smart&&o.smart.protMin!==undefined&&!rng(o.smart.protMin,15,240))x("smart.protMin","Väärtus peab olema 15…240 min");
   if(t.failsafeOnMin!==undefined&&!rng(t.failsafeOnMin,0,1440))x("protect.failsafeOnMin","Väärtus peab olema 0…1440 min");
   if(o.smart&&o.smart.shiftMin!==undefined&&!rng(o.smart.shiftMin,0,240))x("smart.shiftMin","Väärtus peab olema 0…240 min");
   if(!Array.isArray(o.overrides)||o.overrides.length>MAX_OV)x("overrides","Käsitsi perioode saab olla kuni "+MAX_OV);
@@ -400,8 +401,9 @@ var FIELDS=[
  {g:"Kaitseajad (minutites)"},
  {k:"protect.minOnMin",l:"Min tööaeg",t:"num",st:1,h:"Kui küte lülitus sisse, hoitakse seda vähemalt nii kaua. Kaitseb kompressorit lühikeste tsüklite eest."},
  {k:"protect.minOffMin",l:"Min pausiaeg",t:"num",st:1,h:"Kui küte läks pausile, hoitakse pausi vähemalt nii kaua."},
- {k:"protect.maxOffMin",l:"Max pausiaeg",t:"num",st:1,h:"Pikem paus ei ole lubatud: küte lülitatakse sisse ka kõrge hinnaga. 0 = piirangut pole."},
- {k:"smart.shiftMin",l:"Kaitseaja nihe (±)",t:"num",st:5,def:60,h:"Kaitseaja küte lülitub odavaimal perioodil, mis jääb arvutuslikust ajast (eelmise kütte lõpp + max pausiaeg) kuni nii palju varasemaks või hilisemaks. Paus on seega max pausiaeg ± see väärtus. 0 = kaitseaeg täpselt max pausiaja järel. Kehtib GitHubi plaani (uus süsteem) kohta."},
+ {k:"protect.maxOffMin",l:"Kaitseaja intervall",t:"num",st:1,h:"Kaitseaja küte lülitub sisse umbes selle aja möödudes eelmise kütte lõpust, ka kõrge hinnaga. GitHubi plaanis võib aeg nihkuda kaitseaja nihke võrra odavamale perioodile; Shelly praegune loogika rakendab seda täpselt. 0 = kaitseaega pole."},
+ {k:"smart.protMin",l:"Kaitseaja kestus",t:"num",st:5,def:60,h:"Kui kaua kaitseaja küte kestab (ümardatakse üles terveteks perioodideks, vähemalt min tööaeg). Kehtib GitHubi plaani (uus süsteem) kohta."},
+ {k:"smart.shiftMin",l:"Kaitseaja nihe (±)",t:"num",st:5,def:60,h:"Kaitseaja küte lülitub odavaimal perioodil, mis jääb arvutuslikust ajast (eelmise kütte lõpp + kaitseaja intervall) kuni nii palju varasemaks või hilisemaks. Paus on seega kaitseaja intervall ± see väärtus. 0 = kaitseaeg täpselt intervalli järel. Kehtib GitHubi plaani (uus süsteem) kohta."},
  {k:"protect.failsafeOnMin",l:"Turvarežiimi järgne kaitseaeg",t:"num",st:1,def:30,h:"Kui Shelly ei tea hinda (käivitus, internetikatkestus), lubab see kütte (turvarežiim). Kui soojuspump selle ajal käivitub, hoitakse seda vähemalt siin määratud aja töös, et kaitsta kompressorit lühikeste tsüklite eest. 0 = kaitseaeg ei rakendu ja relee lülitub hinna selgumisel kohe pausile."}
 ];
 // 24 h kellaaeg: "6:00", "6.00", "0600" -> "06:00"
@@ -491,9 +493,11 @@ $("pvSh").onclick=function(e){e.stopPropagation();planView="sh";localStorage.set
 $("pvGh").onclick=function(e){e.stopPropagation();planView="gh";localStorage.setItem("sb_plan","gh");renderPv();renderBars()};
 $("dPrev").onclick=function(e){e.stopPropagation();goDay(-1)};
 $("dNext").onclick=function(e){e.stopPropagation();goDay(1)};
-setInterval(function(){if(token&&!dirty&&!document.hidden)load()},5*60*1000);
+// Automaatne uuendus: andmed iga 60 s (kui nähtav, valikut ja salvestamata muudatusi pole), muidu ainult kellaaeg/jooksev periood
+function canLoad(){return token&&!dirty&&!saveT&&!saving&&selTs===null&&!document.hidden}
+setInterval(function(){if(document.hidden||!S)return;if(canLoad())load();else{renderState();renderBars()}},60*1000);
 setInterval(function(){if(token&&!document.hidden)checkShelly()},5*60*1000);
-document.addEventListener("visibilitychange",function(){if(document.hidden){release();if(saveT||dirty)flush()}});
+document.addEventListener("visibilitychange",function(){if(document.hidden){release();if(saveT||dirty)flush()}else if(canLoad()){load();checkShelly()}});
 if(token)load();else showLogin();
 </script>
 </body>
