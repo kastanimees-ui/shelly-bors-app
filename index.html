@@ -93,7 +93,7 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 .bar.sel{outline:3px solid var(--fjord);outline-offset:1px;filter:brightness(.88)}
 #offline{background:var(--warn);color:#fff;border-radius:var(--radius-l);padding:12px 16px;margin-bottom:14px;font-weight:700}
 .bar .ov{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:.7rem;font-weight:700;color:var(--fjord)}
-.bar .ov.df{color:var(--prio);font-size:.8rem}
+.bar .ov.wt{color:var(--heat-text);font-size:.8rem}
 .pview{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.88rem}
 .pview button{padding:4px 12px;font-size:.88rem}
 .pview button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
@@ -159,7 +159,6 @@ header h1{font-size:1.35rem}
     <div id="chart"><div id="yax" aria-hidden="true"></div><div id="plot"><div id="grid" aria-hidden="true"></div><div id="bars" aria-label="Perioodide hinnad"></div></div></div>
     <div class="axis" id="axisRow"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
     <div id="barinfo" class="small"></div>
-    <div class="pview">Plaan: <button type="button" id="pvSh">Shelly (praegune)</button><button type="button" id="pvGh">GitHub (uus, test)</button><span class="muted small" id="pvInfo"></span></div>
     <div id="chartHelp" hidden>
     <div class="legend">
       <span><i class="sw" style="background:var(--heat)"></i>Küte lubatud</span>
@@ -171,9 +170,9 @@ header h1{font-size:1.35rem}
       <span><i class="sw" style="border-top:2px dashed var(--fjord);height:0;width:16px;border-radius:0"></i>Hinnapiir</span>
       <span><i class="sw" style="border-top:2px dotted var(--ink);height:0;width:16px;border-radius:0"></i>Prioriteetaja piir</span>
       <span><b style="color:var(--fjord)">S/P</b> käsitsi SEES/PAUS</span>
-      <span><b style="color:var(--prio)">●</b> teine plaan (Shelly/GitHub) erineb</span>
+      <span><b style="color:var(--heat-text)">%</b> ootab odavamat perioodi</span>
     </div>
-    <p class="muted small">Puuduta tulpa, et see valida, ja vajuta „Muuda“, et vahetada tuleviku perioodi olekut: automaatne → SEES → PAUS. Valik vabaneb 5 sekundit pärast viimast vajutust või klõpsuga mujal ning muudatus salvestatakse. Möödunud perioodid on värvitud Shelly tegeliku oleku järgi, tulevased Shelly plaani järgi (arvestab ka kaitseaegu). Pärast muudatust on periood katkendjoonega märgitud, kuni Shelly selle kinnitab. Noolega saab vaadata kuni 14 päeva tagust ajalugu ja homset päeva.</p>
+    <p class="muted small">Puuduta tulpa, et see valida, ja vajuta „Muuda“, et vahetada tuleviku perioodi olekut: automaatne → SEES → PAUS. Valik vabaneb 5 sekundit pärast viimast vajutust või klõpsuga mujal ning muudatus salvestatakse. Möödunud perioodid on värvitud Shelly tegeliku oleku järgi, tulevased plaani järgi (GitHub arvutab, Shelly täidab; arvestab kaitseaegu ja odavamat perioodi). Pärast muudatust on periood katkendjoonega märgitud, kuni uus plaan on arvutatud (umbes minut). Noolega saab vaadata kuni 14 päeva tagust ajalugu ja homset päeva.</p>
     </div>
     <div class="boost" id="boostBox"></div>
   </section>
@@ -197,7 +196,6 @@ var OWNER="kastanimees-ui", REPO="shelly-bors", TZ="Europe/Tallinn";
 var API="https://api.github.com/repos/"+OWNER+"/"+REPO+"/contents/";
 var E="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 var SRC={1:"Turvarežiim",2:"Boost",3:"Käsitsi",4:"Prioriteetaeg",5:"Börs",6:"Kaitseaeg",7:"Ootab odavamat"};
-var planG={}, planGgen="", planView=localStorage.getItem("sb_plan")||"sh";
 var MAX_OV=10;
 
 var token=localStorage.getItem("sb_token")||"";
@@ -255,13 +253,13 @@ function ymd(m){return new Date((m+43200)*1000).toISOString().slice(0,10)}
 function dayMid(k){var m0=midnight(now());return k?midnight(m0+k*86400+6*3600):m0}
 // Täna ja homme: prices.json (Shelly kirjutab muutuse korral); vana vorming: history.json p
 // prices.json: hinnad (p, pm), Shelly plaan (pl alates ps, res minutit) ja rakendatud seadete rev
-// GitHubi (Actions) testplaan
-function loadPlanG(){return getFile("plan-test.json").then(function(f){var o=JSON.parse(f.text);planG={};planGgen=o.gen||"";
-  if(o&&typeof o.pl==="string"&&o.ps&&o.res)for(var i=0;i<o.pl.length;i++){var v=E.indexOf(o.pl.charAt(i));if(v>0)planG[o.ps+i*o.res*60]=v}}).catch(function(){planG={}})}
-function loadPrices(){return getFile("prices.json").then(function(f){var o=JSON.parse(f.text);if(o&&o.p&&o.pm)decodeP(o.p,o.pm);
-    plan2={};if(o&&typeof o.pl==="string"&&o.ps&&o.res){for(var i=0;i<o.pl.length;i++){var v=E.indexOf(o.pl.charAt(i));if(v>0)plan2[o.ps+i*o.res*60]=v}}
-    appliedRev=(o&&typeof o.rev==="number")?o.rev:-1;checkPend()})
-  .catch(function(){if(H&&typeof H.p==="string"&&H.pm)decodeP(H.p,H.pm);else priceErr="Hinnad puuduvad (prices.json pole veel loodud)."})}
+// prices.json: tänased ja homsed hinnad (GitHub Actions)
+function loadPrices(){return getFile("prices.json").then(function(f){var o=JSON.parse(f.text);if(o&&o.p&&o.pm)decodeP(o.p,o.pm)})
+  .catch(function(){priceErr="Hinnad puuduvad (prices.json pole veel loodud)."})}
+// plan.json: plaan (GitHub Actions, Shelly täidab) ja rakendatud seadete rev
+function loadPlan(){return getFile("plan.json").then(function(f){var o=JSON.parse(f.text);plan2={};
+    if(o&&typeof o.pl==="string"&&o.ps&&o.res){for(var i=0;i<o.pl.length;i++){var v=E.indexOf(o.pl.charAt(i));if(v>0)plan2[o.ps+i*o.res*60]=v}}
+    appliedRev=(o&&typeof o.rev==="number")?o.rev:-1;checkPend()}).catch(function(){plan2={}})}
 // Möödunud päev: prices/AAAA-KK-PP.json
 // Möödunud päev: tsüklilised päevafailid (14 p) prices/dN.json ja history/dN.json, N = päeva number % 14
 function dayN(m){return Math.floor((m+43200)/86400)%KEEP}
@@ -310,7 +308,7 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
   if(t>=m&&t<end){var nl=document.createElement("div");nl.className="nowline";nl.style.left=((t-m)/(end-m)*100)+"%";grid.appendChild(nl)}
   box.className=res===15?"q":"";
   items.forEach(function(it){var col=document.createElement("button"),b=document.createElement("span"),ts=it.ts;col.type="button";col.className="col";col.dataset.ts=ts;
-    var past=ts+step<=t,h=past?histAt(ts,step):null,cls,pv=past?0:((planView==="gh"?planG[ts]:plan2[ts])||0),pOther=past?0:((planView==="gh"?plan2[ts]:planG[ts])||0),diff=pv&&pOther&&(((pv>>1)&1)!==((pOther>>1)&1));
+    var past=ts+step<=t,h=past?histAt(ts,step):null,cls,pv=past?0:(plan2[ts]||0);
     if(pv){it.pl={st:!!((pv>>1)&1),src:pv>>2};it.sh=1}
     if(it.f===null)cls=" none";
     else if(h&&h.n)cls=(h.act?(h.src===6?" heat prot":" heat"):"")+(h.miss?" miss":"");
@@ -326,8 +324,7 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
     b.style.height=bh+"px";b.style.bottom=bb+"px";
     col.setAttribute("aria-label",hhmm(ts)+" "+(it.f===null?"hind puudub":r1(it.f)+" senti/kWh")+", "+(it.pl.st?"küte lubatud":"paus"));
     var ov=findOv(ts);if(ov){var sp=document.createElement("span");sp.className="ov";sp.textContent=ov.state?"S":"P";b.appendChild(sp)}
-    else if(diff){var dp=document.createElement("span");dp.className="ov df";dp.textContent="●";b.appendChild(dp)}
-    if(pOther){b.dataset.oth=pOther}
+    else if(pv&&(pv>>2)===7){var wp=document.createElement("span");wp.className="ov wt";wp.textContent="%";wp.title="Ootab odavamat perioodi";b.appendChild(wp)}
     col.appendChild(b);box.appendChild(col)});
   showTip(selTs!==null?selTs:curTs(),selTs!==null);
   $("barinfo").textContent=cnt?"":(dayOff<0?(dayDone[m]===2?"Selle päeva hinnad puuduvad (päevafaili pole).":"Laadin hindu…"):dayOff>0?"Homseid hindu pole veel. Shelly laadib need kell 15.":(priceErr||"Hinnad puuduvad."))}
@@ -355,7 +352,7 @@ function showTip(ts,withBtn){var b=$("bars").querySelector('.bar[data-ts="'+ts+'
   var step=S.resolution*60,f=b.dataset.f,raw=b.dataset.raw,src=+b.dataset.src,st=b.dataset.st==="1",ov=findOv(ts),fut=ts+step>now();
   var mode=ov?(ov.state?"käsitsi SEES":"käsitsi PAUS"):"automaatne";
   $("tip").innerHTML='<div class="row"><b>'+hhmm(ts)+"–"+hhmm(ts+step)+'</b><b class="num">'+(f===""?"–":r1(+f)+" s/kWh")+'</b></div>'+
-    '<div class="row muted"><span>'+reason(src,st)+'</span><span class="num">'+(b.dataset.oth&&((+b.dataset.oth>>1)&1)!==(st?1:0)?'<b style="color:var(--prio)">'+(planView==="gh"?"Shelly":"GitHub")+": "+(((+b.dataset.oth>>1)&1)?"küte":"paus")+'</b>':(raw===""?"":"börs "+r1(+raw/10)))+'</span></div>'+
+    '<div class="row muted"><span>'+reason(src,st)+'</span><span class="num">'+(raw===""?"":"börs "+r1(+raw/10))+'</span></div>'+
     '<div class="act small">'+(fut?(pendTs[ts]&&pendRev>appliedRev?'<span style="color:var(--fjord)"><b>Ootab rakendumist…</b></span>':'<span>Olek: <b>'+mode+'</b></span>'):(b.dataset.hact!==undefined?'<span>Tegelik: <b>'+(b.dataset.hact==="1"?"küte":"paus")+" – "+(SRC[+b.dataset.hsrc]||"").toLowerCase()+'</b></span>':'<span class="muted">Tegelik olek teadmata</span>'))+
     (fut&&withBtn?'<button type="button" id="tipBtn">Muuda</button>':'<button type="button" class="ph" tabindex="-1" aria-hidden="true">Muuda</button>')+'</div>';
   var btn=$("tipBtn");if(btn)btn.onclick=function(e){e.stopPropagation();cycleOv(ts)}}
@@ -401,9 +398,9 @@ var FIELDS=[
  {g:"Kaitseajad (minutites)"},
  {k:"protect.minOnMin",l:"Min tööaeg",t:"num",st:1,h:"Kui küte lülitus sisse, hoitakse seda vähemalt nii kaua. Kaitseb kompressorit lühikeste tsüklite eest."},
  {k:"protect.minOffMin",l:"Min pausiaeg",t:"num",st:1,h:"Kui küte läks pausile, hoitakse pausi vähemalt nii kaua."},
- {k:"protect.maxOffMin",l:"Kaitseaja intervall",t:"num",st:1,h:"Kaitseaja küte lülitub sisse umbes selle aja möödudes eelmise kütte lõpust, ka kõrge hinnaga. GitHubi plaanis võib aeg nihkuda kaitseaja nihke võrra odavamale perioodile; Shelly praegune loogika rakendab seda täpselt. 0 = kaitseaega pole."},
- {k:"smart.protMin",l:"Kaitseaja kestus",t:"num",st:5,def:60,h:"Kui kaua kaitseaja küte kestab (ümardatakse üles terveteks perioodideks, vähemalt min tööaeg). Kehtib GitHubi plaani (uus süsteem) kohta."},
- {k:"smart.shiftMin",l:"Kaitseaja nihe (±)",t:"num",st:5,def:60,h:"Kaitseaja küte lülitub odavaimal perioodil, mis jääb arvutuslikust ajast (eelmise kütte lõpp + kaitseaja intervall) kuni nii palju varasemaks või hilisemaks. Paus on seega kaitseaja intervall ± see väärtus. 0 = kaitseaeg täpselt intervalli järel. Kehtib GitHubi plaani (uus süsteem) kohta."},
+ {k:"protect.maxOffMin",l:"Kaitseaja intervall",t:"num",st:1,h:"Kaitseaja küte lülitub sisse umbes selle aja möödudes eelmise kütte lõpust, ka kõrge hinnaga. Aeg võib nihkuda kaitseaja nihke võrra odavamale perioodile. 0 = kaitseaega pole."},
+ {k:"smart.protMin",l:"Kaitseaja kestus",t:"num",st:5,def:60,h:"Kui kaua kaitseaja küte kestab (ümardatakse üles terveteks perioodideks, vähemalt min tööaeg)."},
+ {k:"smart.shiftMin",l:"Kaitseaja nihe (±)",t:"num",st:5,def:60,h:"Kaitseaja küte lülitub odavaimal perioodil, mis jääb arvutuslikust ajast (eelmise kütte lõpp + kaitseaja intervall) kuni nii palju varasemaks või hilisemaks. Paus on seega kaitseaja intervall ± see väärtus. 0 = kaitseaeg täpselt intervalli järel."},
  {k:"protect.failsafeOnMin",l:"Turvarežiimi järgne kaitseaeg",t:"num",st:1,def:30,h:"Kui Shelly ei tea hinda (käivitus, internetikatkestus), lubab see kütte (turvarežiim). Kui soojuspump selle ajal käivitub, hoitakse seda vähemalt siin määratud aja töös, et kaitsta kompressorit lühikeste tsüklite eest. 0 = kaitseaeg ei rakendu ja relee lülitub hinna selgumisel kohe pausile."}
 ];
 // 24 h kellaaeg: "6:00", "6.00", "0600" -> "06:00"
@@ -439,28 +436,28 @@ function save(msg){if(saving){again=true;return Promise.resolve()}
   if(JSON.stringify(S,null,2)===S0){dirty=false;return Promise.resolve()}
   S.rev=(S.rev||0)+1;var text=JSON.stringify(S,null,2);
   saving=true;
-  return putFile("settings.json",text,sha,msg||"seaded").then(function(s){sha=s;S0=text;dirty=false;pendRev=S.rev;pendT=now();startPoll();renderAll(true);toast("Salvestatud. Ootan Shelly kinnitust.")})
+  return putFile("settings.json",text,sha,msg||"seaded").then(function(s){sha=s;S0=text;dirty=false;pendRev=S.rev;pendT=now();startPoll();renderAll(true);toast("Salvestatud. Uus plaan arvutatakse umbes minuti jooksul.")})
    .catch(function(err){if(err.message==="conflict"){toast("Seadeid muudeti vahepeal mujal. Laadisin uuesti, tee muudatus uuesti.");dirty=false;saving=false;load();return}
       toast("Salvestamine ebaõnnestus: "+err.message+". Proovin 30 s pärast uuesti.");clearTimeout(saveT);saveT=setTimeout(function(){saveT=null;save()},30000)})
    .finally(function(){saving=false;if(again){again=false;save()}})}
 // Kinnitus: Shelly kirjutab prices.json faili rakendatud seadete rev; ootamise ajal kontroll iga 30 s
-function startPoll(){if(pollT)return;pollT=setInterval(function(){loadPrices().then(function(){renderAll(true)})},30000)}
+function startPoll(){if(pollT)return;pollT=setInterval(function(){loadPlan().then(function(){renderAll(true)})},30000)}
 function checkPend(){if(pendRev&&appliedRev>=pendRev){pendRev=0;pendTs={};if(pollT){clearInterval(pollT);pollT=null}}
-  else if(pendRev&&now()-pendT>300&&!checkPend.warned){checkPend.warned=1;toast("Shelly pole muudatust 5 minuti jooksul kinnitanud. Kontrolli Shelly ühendust.")}
+  else if(pendRev&&now()-pendT>300&&!checkPend.warned){checkPend.warned=1;toast("Uut plaani pole 5 minuti jooksul arvutatud. Kontrolli GitHub Actionsit (Actions → Plaan).")}
   if(!pendRev)checkPend.warned=0}
 function flush(){clearTimeout(saveT);saveT=null;save()}
 function markPending(){dirty=true;var e=validate(S);showErrs(e);clearTimeout(saveT);saveT=null}
 function setBoost(until){S.boostUntil=until;clearTimeout(saveT);saveT=null;save(until?"boost":"boost lõpp").then(function(){renderAll(true)})}
 
 // ---------- Laadimine ----------
-function renderAll(keepForm){if(!S)return;renderState();renderPv();renderBars();if(!keepForm)renderForm()}
+function renderAll(keepForm){if(!S)return;renderState();renderBars();if(!keepForm)renderForm()}
 function load(){if(saveT||saving)return;
   return getFile("settings.json").then(function(f){sha=f.sha;S0=f.text;S=JSON.parse(f.text);if(!Array.isArray(S.overrides))S.overrides=[];dirty=false;showErrs([]);var n0=S.overrides.length;cleanOv();if(S.overrides.length!==n0)markDirty(500);
       $("login").hidden=true;$("app").hidden=false;renderAll()})
     .catch(function(err){if(err.message==="auth"){localStorage.removeItem("sb_token");token="";showLogin("Token ei kehti või puudub õigus.")}else toast("Seadete laadimine ebaõnnestus: "+err.message);throw err})
     .then(function(){return Promise.allSettled([
       getFile("history.json").then(function(f){var o=JSON.parse(f.text);H=null;if(o&&typeof o.s==="string"){if(o.v===2){H={d0:o.d,s:o.s};addHist(o.d,o.s)}else if(o.v===1){H={d0:o.d0,s:o.s};addHist(o.d0,o.s)}}}).catch(function(){H=null})])})
-    .then(function(){priceErr="";var p=[loadPrices(),loadPlanG(),loadDay(dayMid(0),true)];if(dayOff<0)p.push(loadDay(dayMid(dayOff)));return Promise.all(p)})
+    .then(function(){priceErr="";var p=[loadPrices(),loadPlan(),loadDay(dayMid(0),true)];if(dayOff<0)p.push(loadDay(dayMid(dayOff)));return Promise.all(p)})
     .then(function(){renderAll(true);checkShelly()})}
 // Shelly ühendus: history.json viimase commit'i aeg
 function checkShelly(){return fetch("https://api.github.com/repos/"+OWNER+"/"+REPO+"/commits?path=history.json&per_page=1",{headers:{"Authorization":"Bearer "+token,"Accept":"application/vnd.github+json"},cache:"no-store"})
@@ -487,10 +484,6 @@ $("bars").onclick=function(e){if(noClick){e.stopPropagation();return}var b=e.tar
 $("bars").onmouseover=function(e){if(selTs!==null)return;var b=e.target.closest(".col");if(b)showTip(+b.dataset.ts,false)};
 $("plot").onmouseleave=function(){if(selTs===null&&S)showTip(curTs(),false)};
 document.addEventListener("click",function(e){if(!$("bars").contains(e.target)&&!$("tip").contains(e.target))release()});
-function renderPv(){$("pvSh").setAttribute("aria-pressed",String(planView==="sh"));$("pvGh").setAttribute("aria-pressed",String(planView==="gh"));
-  $("pvInfo").textContent=planView==="gh"?(planGgen?"arvutatud "+hhmm(Math.floor(Date.parse(planGgen)/1000)):"plaani pole"):"● = GitHubi plaan erineb"}
-$("pvSh").onclick=function(e){e.stopPropagation();planView="sh";localStorage.setItem("sb_plan","sh");renderPv();renderBars()};
-$("pvGh").onclick=function(e){e.stopPropagation();planView="gh";localStorage.setItem("sb_plan","gh");renderPv();renderBars()};
 $("dPrev").onclick=function(e){e.stopPropagation();goDay(-1)};
 $("dNext").onclick=function(e){e.stopPropagation();goDay(1)};
 // Automaatne uuendus: andmed iga 60 s (kui nähtav, valikut ja salvestamata muudatusi pole), muidu ainult kellaaeg/jooksev periood
