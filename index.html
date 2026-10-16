@@ -46,9 +46,9 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 #mainCard .price small{font-size:.95rem;font-weight:400;color:var(--muted)}
 #mainCard .help{width:28px;height:28px;font-size:.9rem}
 .mid{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;margin:14px 0 8px}
-.boost{display:flex;gap:6px;flex-wrap:nowrap;margin-top:16px}
-.boost button{flex:1 1 0;min-width:0;padding:7px 6px;font-size:.92rem;white-space:nowrap}
-.boost .on{background:var(--heat);border-color:var(--heat);color:var(--heat-ink);font-weight:700}
+.tools{display:flex;justify-content:flex-end;margin-top:10px}
+.tools button{width:40px;height:40px;padding:0;font-size:1.3rem;line-height:1;border-radius:50%}
+.tools button[aria-expanded="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
 
 /* Hinnariba */
 .tabs{display:flex;gap:6px;margin-bottom:14px}
@@ -174,15 +174,15 @@ header h1{font-size:1.35rem}
     </div>
     <p class="muted small">Puuduta tulpa, et see valida, ja vajuta „Muuda“, et vahetada tuleviku perioodi olekut: automaatne → SEES → PAUS. Valik vabaneb 5 sekundit pärast viimast vajutust või klõpsuga mujal ning muudatus salvestatakse. Möödunud perioodid on värvitud Shelly tegeliku oleku järgi, tulevased plaani järgi (GitHub arvutab, Shelly täidab; arvestab kaitseaegu ja odavamat perioodi). Pärast muudatust on periood katkendjoonega märgitud, kuni uus plaan on arvutatud (umbes minut). Noolega saab vaadata kuni 14 päeva tagust ajalugu ja homset päeva.</p>
     </div>
-    <div class="boost" id="boostBox"></div>
+    <div class="tools"><button type="button" id="gearBtn" aria-expanded="false" aria-controls="setSec" aria-label="Seaded" title="Seaded">⚙</button></div>
   </section>
 
 
-  <section>
+  <section id="setSec" hidden>
     <h2>Seaded</h2>
     <p id="formErr" class="err small" hidden></p>
     <form id="form" onsubmit="return false"></form>
-    <p class="muted small">Muudatused salvestatakse kohe. Shelly loeb need sisse umbes minuti jooksul.</p>
+    <p class="muted small">Muudatused salvestatakse kohe. Uus plaan arvutatakse umbes minuti jooksul ja Shelly rakendab selle järgmisel minutil.</p>
     <button id="logout" class="small">Unusta token sellest seadmest</button>
   </section>
 </div>
@@ -279,7 +279,6 @@ function inPrio(ts){var a=hm(S.priority.start),b=hm(S.priority.end);if(a===b)ret
 function findOv(ts){for(var i=0;i<S.overrides.length;i++)if(S.overrides[i].start===ts)return S.overrides[i];return null}
 // Plaan hinnapiiride järgi (kaitseaegu ei arvesta)
 function plan(ts,raw){if(!S.enabled)return{st:true,src:1};
-  if(ts<S.boostUntil&&ts+S.resolution*60>now())return{st:true,src:2};
   var ov=findOv(ts);if(ov)return{st:ov.state,src:3};
   if(raw===null)return{st:true,src:1};
   var f=fp(raw);if(inPrio(ts))return{st:f<=S.price.priorityLimit,src:4};
@@ -339,7 +338,7 @@ function goDay(d){var k=dayOff+d;if(k<-(KEEP-1)||k>1)return;clearTimeout(selT);s
   if(k<0){var m=dayMid(k);renderBars();loadDay(m).then(renderBars)}else renderBars()}
 
 var selTs=null,selT=null,SEL_MS=5000;
-function reason(src,st){if(src===1)return S.enabled?"Turvarežiim – hind puudub":"Automaatika väljas";if(src===2)return "Boost";
+function reason(src,st){if(src===1)return S.enabled?"Turvarežiim – plaan puudub":"Automaatika väljas";if(src===2)return "Boost";
   if(src===3)return st?"Käsitsi: SEES":"Käsitsi: PAUS";if(src===4)return st?"Küte – prioriteetaeg":"Paus – üle prioriteetaja piiri";
   if(src===6)return st?"Küte – kaitseaeg":"Paus – kaitseaeg";
   if(src===7)return "Paus – ootab odavamat tundi";
@@ -374,10 +373,7 @@ function renderState(){var t=now(),res=S.resolution,ps=t-((t+tzOff(t))%(res*60))
   $("stLabel").textContent=st?"Küte lubatud":"Paus";
   $("stPrice").innerHTML=raw===null?"–":r1(fp(raw))+" <small>s/kWh</small>";
   $("stSrc").textContent=(last?("Allikas: "+SRC[last.src]):"Shelly olek pole veel teada")+(pendRev>appliedRev&&pendRev?" · seaded ootavad rakendumist…":"");
-  $("stTime").textContent=last?("Seisuga "+hhmm(last.ts)):"";
-  var bb=$("boostBox");bb.innerHTML="";var on=S.boostUntil>t;
-  if(on){var x=document.createElement("button");x.className="on";x.textContent="Lõpeta "+hhmm(S.boostUntil);x.title="Boost kestab kuni "+hhmm(S.boostUntil)+". Vajuta, et lõpetada.";x.onclick=function(){setBoost(0)};bb.appendChild(x)}
-  [1,2,3].forEach(function(h){var x=document.createElement("button");x.textContent="Boost "+h+" h";x.onclick=function(){setBoost(curTs()+h*3600)};bb.appendChild(x)})}
+  $("stTime").textContent=last?("Seisuga "+hhmm(last.ts)):"";}
 
 // Ajalugu: märk = allikas*4 + plaanitud*2 + tegelik
 function lastHist(){if(!H)return null;for(var i=H.s.length-1;i>=0;i--){var v=E.indexOf(H.s.charAt(i));if(v>0)return{ts:H.d0+i*900,src:v>>2,pl:!!(v&2),act:!!(v&1)}}return null}
@@ -401,13 +397,13 @@ var FIELDS=[
  {g:"Kaitseajad (minutites)"},
  {k:"protect.minOnMin",l:"Min tööaeg",t:"num",st:1,h:"Kui küte lülitus sisse, hoitakse seda vähemalt nii kaua. Kaitseb kompressorit lühikeste tsüklite eest."},
  {k:"protect.minOffMin",l:"Min pausiaeg",t:"num",st:1,h:"Kui küte läks pausile, hoitakse pausi vähemalt nii kaua."},
- {k:"protect.maxOffMin",l:"Kaitseaja intervall",t:"num",st:1,h:"Kaitseaja küte lülitub sisse umbes selle aja möödudes eelmise kütte lõpust, ka kõrge hinnaga. Aeg võib nihkuda kaitseaja nihke võrra odavamale perioodile. 0 = kaitseaega pole."},
+ {k:"protect.maxOffMin",l:"Kaitseaja intervall",t:"num",st:1,h:"Kaitseaja küte lülitub sisse umbes selle aja möödudes eelmise kütte lõpust, ka kõrge hinnaga. Täpset aega mõjutavad kaitseaja nihe ja ootamine. 0 = kaitseaega pole."},
  {k:"smart.protMin",l:"Kaitseaja kestus",t:"num",st:5,def:60,h:"Kui kaua kaitseaja küte kestab (ümardatakse üles terveteks perioodideks, vähemalt min tööaeg)."},
- {k:"smart.shiftMin",l:"Kaitseaja nihe (±)",t:"num",st:5,def:60,h:"Kaitseaja küte lülitub odavaimal perioodil, mis jääb arvutuslikust ajast (eelmise kütte lõpp + kaitseaja intervall) kuni nii palju varasemaks või hilisemaks. Paus on seega kaitseaja intervall ± see väärtus. 0 = kaitseaeg täpselt intervalli järel."},
+ {k:"smart.shiftMin",l:"Kaitseaja nihe (±)",t:"num",st:5,def:60,h:"Arvutuslikust ajast (eelmise kütte lõpp + kaitseaja intervall) kuni nii palju varem või hiljem valitakse odavaim periood. Kui ootamine on sees, võib kaitseaeg sellest perioodist veel ettevaate võrra edasi nihkuda. 0 = nihet pole."},
  {k:"protect.failsafeOnMin",l:"Turvarežiimi järgne kaitseaeg",t:"num",st:1,def:30,h:"Kui plaan puudub (näiteks pikk internetikatkestus või GitHubi rike), lubab Shelly kütte (turvarežiim). Kui soojuspump selle ajal käivitub, hoitakse seda vähemalt siin määratud aja töös, et kaitsta kompressorit lühikeste tsüklite eest. 0 = kaitseaeg ei rakendu ja relee lülitub hinna selgumisel kohe pausile."},
  {g:"Ootamine odavama perioodi pärast"},
- {k:"smart.wait",l:"Ootamine sees",t:"bool",def:true,h:"Kui küte peaks pärast pausi hinna järgi sisse lülituma, aga lähiajal tuleb oluliselt odavam periood, jääb küte selle ootamiseks pausile (tulba kohal %). Mõlemad hinnavahe tingimused peavad olema täidetud."},
- {k:"smart.lookMin",l:"Ettevaade (min)",t:"num",st:15,def:120,h:"Kui kaugele ette odavamat perioodi otsitakse."},
+ {k:"smart.wait",l:"Ootamine sees",t:"bool",def:true,h:"Kui küte peaks pausilt sisse lülituma (hinna või kaitseaja tõttu), aga ettevaate piires tuleb oluliselt odavam periood, jääb küte selle ootamiseks pausile (tulba kohal %). Mõlemad hinnavahe tingimused peavad olema täidetud."},
+ {k:"smart.lookMin",l:"Ettevaade (min)",t:"num",st:15,def:120,h:"Kui kaugele odavamat perioodi otsitakse. Arvestatakse hetkest, mil küte muidu sisse lülituks; kaitseaja puhul nihke valitud perioodist."},
  {k:"smart.gainPct",l:"Min hinnavahe (%)",t:"num",st:5,def:50,h:"Mitu protsenti peab tulevane periood olema odavam kui praegune, et tasuks oodata."},
  {k:"smart.minDiff",l:"Min hinnavahe (s/kWh)",t:"num",st:0.5,def:3,h:"Mitu senti kWh kohta peab tulevane periood olema odavam kui praegune. Väldib ootamist väikese säästu pärast madalate hindade korral."}
 ];
@@ -455,7 +451,6 @@ function checkPend(){if(pendRev&&appliedRev>=pendRev){pendRev=0;pendTs={};if(pol
   if(!pendRev)checkPend.warned=0}
 function flush(){clearTimeout(saveT);saveT=null;save()}
 function markPending(){dirty=true;var e=validate(S);showErrs(e);clearTimeout(saveT);saveT=null}
-function setBoost(until){S.boostUntil=until;clearTimeout(saveT);saveT=null;save(until?"boost":"boost lõpp").then(function(){renderAll(true)})}
 
 // ---------- Laadimine ----------
 function renderAll(keepForm){if(!S)return;renderState();renderBars();if(!keepForm)renderForm()}
@@ -492,6 +487,7 @@ $("bars").onclick=function(e){if(noClick){e.stopPropagation();return}var b=e.tar
 $("bars").onmouseover=function(e){if(selTs!==null)return;var b=e.target.closest(".col");if(b)showTip(+b.dataset.ts,false)};
 $("plot").onmouseleave=function(){if(selTs===null&&S)showTip(curTs(),false)};
 document.addEventListener("click",function(e){if(!$("bars").contains(e.target)&&!$("tip").contains(e.target))release()});
+$("gearBtn").onclick=function(e){e.stopPropagation();var sec=$("setSec"),open=sec.hidden;sec.hidden=!open;this.setAttribute("aria-expanded",String(open));if(open&&sec.scrollIntoView)sec.scrollIntoView({behavior:"smooth",block:"start"})};
 $("dPrev").onclick=function(e){e.stopPropagation();goDay(-1)};
 $("dNext").onclick=function(e){e.stopPropagation();goDay(1)};
 // Automaatne uuendus: andmed iga 60 s (kui nähtav, valikut ja salvestamata muudatusi pole), muidu ainult kellaaeg/jooksev periood
