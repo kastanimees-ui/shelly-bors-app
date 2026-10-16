@@ -45,6 +45,9 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 #mainCard .price{font-size:2.1rem;font-weight:700}
 #mainCard .price small{font-size:.95rem;font-weight:400;color:var(--muted)}
 #mainCard .help{width:28px;height:28px;font-size:.9rem}
+.srcrow{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#dayStats{margin-top:6px}
+#dayStats b{color:var(--ink)}
 .mid{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;margin:14px 0 8px}
 .tools{display:flex;justify-content:flex-end;margin-top:10px}
 .tools button{width:40px;height:40px;padding:0;font-size:1.3rem;line-height:1;border-radius:50%}
@@ -151,7 +154,7 @@ header h1{font-size:1.35rem}
       <div class="tl"><span class="label" id="stLabel">–</span><button type="button" class="help" id="chartHelpBtn" aria-expanded="false" aria-controls="chartHelp" aria-label="Graafiku selgitus">?</button></div>
       <div class="tr"><span class="muted small" id="stTime"></span><span class="price num" id="stPrice">–</span></div>
     </div>
-    <div class="muted small" id="stSrc"></div>
+    <div class="srcrow"><span class="muted small" id="stSrc"></span><span class="muted small" id="stAvg"></span></div>
     <div class="mid">
       <div class="daynav"><button type="button" id="dPrev" aria-label="Eelmine päev">‹</button><span id="dLabel">Täna</span><button type="button" id="dNext" aria-label="Järgmine päev">›</button></div>
       <div id="tip" aria-live="polite"></div>
@@ -159,6 +162,7 @@ header h1{font-size:1.35rem}
     <div id="chart"><div id="yax" aria-hidden="true"></div><div id="plot"><div id="grid" aria-hidden="true"></div><div id="bars" aria-label="Perioodide hinnad"></div></div></div>
     <div class="axis" id="axisRow"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
     <div id="barinfo" class="small"></div>
+    <div id="dayStats" class="small muted"></div>
     <div id="chartHelp" hidden>
     <div class="legend">
       <span><i class="sw" style="background:var(--heat)"></i>Küte lubatud</span>
@@ -309,6 +313,7 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
       p.style.left=(i0/n*100)+"%";p.style.width=((i-i0)/n*100)+"%";p.style.bottom=y(S.price.priorityLimit)+"px";if(S.price.priorityLimit<=hi)grid.appendChild(p);i0=-1}}
   if(t>=m&&t<end){var nl=document.createElement("div");nl.className="nowline";nl.style.left=((t-m)/(end-m)*100)+"%";grid.appendChild(nl)}
   box.className=res===15?"q":"";
+  var heatN=0,heatSum=0;
   items.forEach(function(it){var col=document.createElement("button"),b=document.createElement("span"),ts=it.ts;col.type="button";col.className="col";col.dataset.ts=ts;
     var past=ts+step<=t,h=past?histAt(ts,step):null,cls,pv=past?0:(plan2[ts]||0);
     if(pv){it.pl={st:!!((pv>>1)&1),src:pv>>2};it.sh=1}
@@ -318,6 +323,7 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
     else if(!past&&it.pr&&it.f>S.price.limit)cls=" prio";
     else cls=it.pl.st?" heat":"";
     if(!past&&pendTs[ts]&&pendRev>appliedRev)cls+=" pend";
+    var heatOn=(h&&h.n)?h.act:it.pl.st;if(heatOn&&it.f!==null){heatN++;heatSum+=it.f}
     b.className="bar"+cls+(it.f!==null&&it.f<0?" neg":"")+(past?" past":"")+(ts===selTs?" sel":"");
     if(h&&h.n){b.dataset.hact=h.act?1:0;b.dataset.hsrc=h.src}
     b.dataset.ts=ts;b.dataset.f=it.f===null?"":it.f;b.dataset.raw=it.raw===null?"":it.raw;b.dataset.st=it.pl.st?1:0;b.dataset.src=it.pl.src;
@@ -328,6 +334,8 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
     var ov=findOv(ts);if(ov){var sp=document.createElement("span");sp.className="ov";sp.textContent=ov.state?"S":"P";b.appendChild(sp)}
     else if(pv&&(pv>>2)===7){var wp=document.createElement("span");wp.className="ov wt";wp.textContent="%";wp.title="Ootab odavamat perioodi";b.appendChild(wp)}
     col.appendChild(b);box.appendChild(col)});
+  // Päeva statistika: küte lubatud (tegelik + plaan) ja kütteaja keskmine hind
+  var mins=heatN*res;$("dayStats").innerHTML=cnt?("Küte lubatud <b>"+(mins%60?Math.floor(mins/60)+" h "+(mins%60)+" min":(mins/60)+" h")+"</b>"+(heatN?" · kütteaja keskmine <b>"+r1(heatSum/heatN)+"</b> s/kWh":"")):"";
   showTip(selTs!==null?selTs:curTs(),selTs!==null);
   $("barinfo").textContent=cnt?"":(dayOff<0?(dayDone[m]===2?"Selle päeva hinnad puuduvad (päevafaili pole).":"Laadin hindu…"):dayOff>0?"Homseid hindu pole veel. Shelly laadib need kell 15.":(priceErr||"Hinnad puuduvad."))}
 function dayLabel(k){return k===1?"Homme":k===0?"Täna":k===-1?"Eile":k===-2?"Üleeile":(-k)+" p tagasi"}
@@ -373,7 +381,9 @@ function renderState(){var t=now(),res=S.resolution,ps=t-((t+tzOff(t))%(res*60))
   $("stLabel").textContent=st?"Küte lubatud":"Paus";
   $("stPrice").innerHTML=raw===null?"–":r1(fp(raw))+" <small>s/kWh</small>";
   $("stSrc").textContent=(last?("Allikas: "+SRC[last.src]):"Shelly olek pole veel teada")+(pendRev>appliedRev&&pendRev?" · seaded ootavad rakendumist…":"");
-  $("stTime").textContent=last?("Seisuga "+hhmm(last.ts)):"";}
+  $("stTime").textContent=last?("Seisuga "+hhmm(last.ts)):"";
+  var m0=dayMid(0),m1=dayMid(1),as=0,an=0;for(var q=m0;q<m1;q+=res*60){var rq=periodRaw(q,res);if(rq!==null){as+=fp(rq);an++}}
+  $("stAvg").textContent=an?("Päeva keskmine "+r1(as/an)+" s/kWh"):"";}
 
 // Ajalugu: märk = allikas*4 + plaanitud*2 + tegelik
 function lastHist(){if(!H)return null;for(var i=H.s.length-1;i>=0;i--){var v=E.indexOf(H.s.charAt(i));if(v>0)return{ts:H.d0+i*900,src:v>>2,pl:!!(v&2),act:!!(v&1)}}return null}
