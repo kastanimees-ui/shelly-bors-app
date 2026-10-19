@@ -4,7 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Börsiküte</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♨️</text></svg>">
+<meta name="apple-mobile-web-app-title" content="Börsiküte">
+<meta name="application-name" content="Börsiküte">
+<link rel="icon" href="icon-small.svg" type="image/svg+xml">
+<link rel="icon" href="icon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2C6A88">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
@@ -325,7 +331,7 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
     if(!past&&pendTs[ts]&&pendRev>appliedRev)cls+=" pend";
     var heatOn=(h&&h.n)?h.act:it.pl.st;if(heatOn&&it.f!==null){heatN++;heatSum+=it.f}
     b.className="bar"+cls+(it.f!==null&&it.f<0?" neg":"")+(past?" past":"")+(ts===selTs?" sel":"");
-    if(h&&h.n){b.dataset.hact=h.act?1:0;b.dataset.hsrc=h.src}
+    if(h&&h.n){b.dataset.hact=h.act?1:0;b.dataset.hsrc=h.src;b.dataset.hmiss=h.miss?1:0}
     b.dataset.ts=ts;b.dataset.f=it.f===null?"":it.f;b.dataset.raw=it.raw===null?"":it.raw;b.dataset.st=it.pl.st?1:0;b.dataset.src=it.pl.src;
     var y0=y(0),bh,bb;
     if(it.f===null){bh=2;bb=y0}else if(it.f>=0){bh=Math.max(2,y(Math.max(it.f,0.5))-y0);bb=y0}else{bh=Math.max(2,y0-y(Math.min(it.f,-0.5)));bb=y0-bh}
@@ -360,10 +366,11 @@ function armSel(){clearTimeout(selT);selT=setTimeout(release,SEL_MS)}
 function release(){clearTimeout(selT);selT=null;if(selTs===null)return;selTs=null;renderBars();if(dirty)flush()}
 function showTip(ts,withBtn){var b=$("bars").querySelector('.bar[data-ts="'+ts+'"]');if(!b){tipDefault();return}
   var step=S.resolution*60,f=b.dataset.f,raw=b.dataset.raw,src=+b.dataset.src,st=b.dataset.st==="1",ov=findOv(ts),fut=ts+step>now();
-  var mode=ov?(ov.state?"käsitsi SEES":"käsitsi PAUS"):"automaatne";
+  var mode=ov?(ov.state?"käsitsi SEES":"käsitsi PAUS"):"automaatne",hk=!fut&&b.dataset.hact!==undefined;
+  if(hk){st=b.dataset.hact==="1";src=+b.dataset.hsrc}
   $("tip").innerHTML='<div class="row"><b>'+hhmm(ts)+"–"+hhmm(ts+step)+'</b><b class="num">'+(f===""?"–":r1(+f)+" s/kWh")+'</b></div>'+
-    '<div class="row muted"><span>'+reason(src,st)+'</span><span class="num">'+(raw===""?"":"börs "+r1(+raw/10))+'</span></div>'+
-    '<div class="act small">'+(fut?(pendTs[ts]&&pendRev>appliedRev?'<span style="color:var(--fjord)"><b>Ootab rakendumist…</b></span>':'<span>Olek: <b>'+mode+'</b></span>'):(b.dataset.hact!==undefined?'<span>Tegelik: <b>'+(b.dataset.hact==="1"?"küte":"paus")+" – "+(SRC[+b.dataset.hsrc]||"").toLowerCase()+'</b></span>':'<span class="muted">Tegelik olek teadmata</span>'))+
+    '<div class="row muted"><span>'+(fut||hk?reason(src,st):"Tegelik olek teadmata")+'</span><span class="num">'+(raw===""?"":"börs "+r1(+raw/10))+'</span></div>'+
+    '<div class="act small">'+(fut?(pendTs[ts]&&pendRev>appliedRev?'<span style="color:var(--fjord)"><b>Ootab rakendumist…</b></span>':'<span>Olek: <b>'+mode+'</b></span>'):(hk?'<span class="muted">Tegelik olek'+(b.dataset.hmiss==="1"?' (osa perioodist erines plaanist)':'')+'</span>':'<span class="muted">Möödunud periood</span>'))+
     (fut&&withBtn?'<button type="button" id="tipBtn">Muuda</button>':'<button type="button" class="ph" tabindex="-1" aria-hidden="true">Muuda</button>')+'</div>';
   var btn=$("tipBtn");if(btn)btn.onclick=function(e){e.stopPropagation();cycleOv(ts)}}
 // Jooksva perioodi tegelik olek ajaloost, kui see erineb plaanist
@@ -446,13 +453,15 @@ function markDirty(delay){dirty=true;var e=validate(S);showErrs(e);clearTimeout(
   if(e.length)return;saveT=setTimeout(function(){saveT=null;save()},delay===undefined?2000:delay)}
 function cleanOv(){var t=now(),len=S.resolution*60;S.overrides=S.overrides.filter(function(o){return o.start+len>t&&((o.start-midnight(o.start))%len)===0})}
 function save(msg){if(saving){again=true;return Promise.resolve()}
-  cleanOv();var e=validate(S);showErrs(e);if(e.length)return Promise.resolve();
+  cleanOv();var e=validate(S);showErrs(e);
+  if(e.length){toast("Salvestamine katkes: seadetes on viga. Paranda punasega märgitud väli.");var sec=$("setSec");sec.hidden=false;$("gearBtn").setAttribute("aria-expanded","true");
+    var bad=document.querySelector(".field.bad");if(bad&&bad.scrollIntoView)bad.scrollIntoView({behavior:"smooth",block:"center"});return Promise.resolve()}
   if(JSON.stringify(S,null,2)===S0){dirty=false;return Promise.resolve()}
   S.rev=(S.rev||0)+1;var text=JSON.stringify(S,null,2);
   saving=true;
-  return putFile("settings.json",text,sha,msg||"seaded").then(function(s){sha=s;S0=text;dirty=false;pendRev=S.rev;pendT=now();startPoll();renderAll(true);toast("Salvestatud. Uus plaan arvutatakse umbes minuti jooksul.")})
+  return putFile("settings.json",text,sha,msg||"seaded").then(function(s){sha=s;S0=text;dirty=false;lastSave=now();pendRev=S.rev;pendT=now();startPoll();renderAll(true);toast("Salvestatud. Uus plaan arvutatakse umbes minuti jooksul.")})
    .catch(function(err){if(err.message==="conflict"){toast("Seadeid muudeti vahepeal mujal. Laadisin uuesti, tee muudatus uuesti.");dirty=false;saving=false;load();return}
-      toast("Salvestamine ebaõnnestus: "+err.message+". Proovin 30 s pärast uuesti.");clearTimeout(saveT);saveT=setTimeout(function(){saveT=null;save()},30000)})
+      toast("Salvestamine ebaõnnestus ("+err.message+"). Muudatus ei ole veel salvestatud, proovin 30 s pärast uuesti – ära sulge lehte.");clearTimeout(saveT);saveT=setTimeout(function(){saveT=null;save()},30000)})
    .finally(function(){saving=false;if(again){again=false;save()}})}
 // Kinnitus: Shelly kirjutab prices.json faili rakendatud seadete rev; ootamise ajal kontroll iga 30 s
 function startPoll(){if(pollT)return;pollT=setInterval(function(){loadPlan().then(function(){renderAll(true)})},30000)}
@@ -501,7 +510,10 @@ $("gearBtn").onclick=function(e){e.stopPropagation();var sec=$("setSec"),open=se
 $("dPrev").onclick=function(e){e.stopPropagation();goDay(-1)};
 $("dNext").onclick=function(e){e.stopPropagation();goDay(1)};
 // Automaatne uuendus: andmed iga 60 s (kui nähtav, valikut ja salvestamata muudatusi pole), muidu ainult kellaaeg/jooksev periood
-function canLoad(){return token&&!dirty&&!saveT&&!saving&&selTs===null&&!document.hidden}
+// Pärast salvestust 90 s automaatset laadimist ei tehta (GitHubi vahemälu võib anda vana faili)
+var lastSave=0;
+function canLoad(){return token&&!dirty&&!saveT&&!saving&&selTs===null&&!document.hidden&&now()-lastSave>90}
+window.addEventListener("beforeunload",function(e){if(dirty||saveT||saving){e.preventDefault();e.returnValue=""}});
 setInterval(function(){if(document.hidden||!S)return;if(canLoad())load();else{renderState();renderBars()}},60*1000);
 setInterval(function(){if(token&&!document.hidden)checkShelly()},5*60*1000);
 document.addEventListener("visibilitychange",function(){if(document.hidden){release();if(saveT||dirty)flush()}else if(canLoad()){load();checkShelly()}});
