@@ -17,13 +17,13 @@
 <style>
 :root{
   --bg:#E9EEEC; --panel:#F7F9F8; --ink:#1D2A30; --muted:#5E6F77; --line:#C9D3D1;
-  --heat:#8CC98A; --heat-ink:#1F3D1E; --pause:#A3B1B8; --fjord:#2C6A88; --heat-text:#3E8A3B; --prio:#F2B880; --warn:#B3261E;
+  --heat:#8CC98A; --heat-ink:#1F3D1E; --pause:#A3B1B8; --fjord:#2C6A88; --heat-text:#3E8A3B; --prio:#2F6E2D; --warn:#B3261E;
   --radius-l:14px; --radius-s:6px;
   font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:light dark;
 }
 @media (prefers-color-scheme:dark){
-  :root{--bg:#141B1E;--panel:#1C2529;--ink:#E3EAEC;--muted:#93A4AB;--line:#2F3B40;--heat:#6FB06D;--heat-ink:#0F240E;--pause:#4E5D64;--fjord:#7BB6D4;--heat-text:#8FD08C;--prio:#C98A4B;--warn:#F2877F}
+  :root{--bg:#141B1E;--panel:#1C2529;--ink:#E3EAEC;--muted:#93A4AB;--line:#2F3B40;--heat:#6FB06D;--heat-ink:#0F240E;--pause:#4E5D64;--fjord:#7BB6D4;--heat-text:#8FD08C;--prio:#3E8A3B;--warn:#F2877F}
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink)}
@@ -60,8 +60,6 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 .tools button[aria-expanded="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
 
 /* Hinnariba */
-.tabs{display:flex;gap:6px;margin-bottom:14px}
-.tabs button[aria-selected="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
 #chart{display:grid;grid-template-columns:36px 1fr;gap:4px}
 #yax{position:relative;height:170px}
 .yl{position:absolute;right:0;transform:translateY(50%);font-size:.72rem;color:var(--muted)}
@@ -82,7 +80,8 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 .bar{position:absolute;left:0;right:0;display:block;background:var(--pause);border-radius:3px 3px 0 0}
 .bar.none{background:var(--line)}
 .bar.neg{border-radius:0 0 3px 3px}
-.bar.prio{background:var(--prio)}
+.bar.prio{background-color:var(--prio)}
+.bar.unk{background:var(--line)}
 .bar.prot{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.6) 0 3px,transparent 3px 7px)}
 .bar.pend{outline:2px dashed var(--fjord);outline-offset:1px}
 .bar.miss{background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.22) 0 3px,transparent 3px 6px)}
@@ -103,9 +102,6 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 #offline{background:var(--warn);color:#fff;border-radius:var(--radius-l);padding:12px 16px;margin-bottom:14px;font-weight:700}
 .bar .ov{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:.7rem;font-weight:700;color:var(--fjord)}
 .bar .ov.wt{color:var(--heat-text);font-size:.8rem}
-.pview{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.88rem}
-.pview button{padding:4px 12px;font-size:.88rem}
-.pview button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
 .axis{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin:4px 0 0 40px}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);margin-top:8px}
 .sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px}
@@ -113,13 +109,7 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 
 /* Ajalugu */
 .hrow{display:grid;grid-template-columns:62px 1fr;align-items:center;gap:8px;margin-bottom:6px}
-.hcells{display:grid;grid-template-columns:repeat(96,1fr);height:22px;border-radius:4px;overflow:hidden;background:var(--line)}
-.hc{background:transparent}
-.hc.p0{background:var(--pause)}
-.hc.p1{background:var(--heat)}
 .hc.miss{background:repeating-linear-gradient(45deg,var(--pause),var(--pause) 2px,transparent 2px,transparent 4px)}
-.hticks{display:grid;grid-template-columns:62px 1fr;gap:8px;font-size:.75rem;color:var(--muted)}
-.hticks div:last-child{display:flex;justify-content:space-between}
 
 /* Seaded */
 fieldset{border:0;padding:0;margin:0 0 18px}
@@ -175,7 +165,8 @@ header h1{font-size:1.35rem}
       <span><i class="sw" style="background:var(--pause)"></i>Paus</span>
       <span><i class="sw" style="background:var(--heat);background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.6) 0 3px,transparent 3px 7px)"></i>Küte kaitseaja tõttu</span>
       <span><i class="sw" style="outline:2px dashed var(--fjord);outline-offset:1px"></i>Ootab rakendumist</span>
-      <span><i class="sw" style="background:var(--prio)"></i>Prioriteetaeg, hind üle hinnapiiri</span>
+      <span><i class="sw" style="background:var(--prio)"></i>Küte prioriteetajal (hind üle tavalise piiri)</span>
+      <span><i class="sw" style="background:var(--line)"></i>Plaan puudub</span>
       <span><i class="sw" style="background:var(--pause);background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.22) 0 3px,transparent 3px 6px)"></i>Tegelik olek erines plaanist</span>
       <span><i class="sw" style="border-top:2px dashed var(--fjord);height:0;width:16px;border-radius:0"></i>Hinnapiir</span>
       <span><i class="sw" style="border-top:2px dotted var(--ink);height:0;width:16px;border-radius:0"></i>Prioriteetaja piir</span>
@@ -262,7 +253,6 @@ function validate(o){var e=[],p=o.price||{},q=o.priority||{},t=o.protect||{};
 function fp(raw){var p=S.price;return(raw/10+p.margin+p.network+p.other)*(1+p.vatPct/100)}
 // Hinnastring (3 märki pesa kohta, 15 min) -> prices[ts]
 function decodeP(p,base){for(var i=0;i*3<p.length;i++){var j=i*3,n=(E.indexOf(p.charAt(j))<<12)|(E.indexOf(p.charAt(j+1))<<6)|E.indexOf(p.charAt(j+2));if(n>0)prices[base+i*900]=(n-100001)/10}}
-function ymd(m){return new Date((m+43200)*1000).toISOString().slice(0,10)}
 function dayMid(k){var m0=midnight(now());return k?midnight(m0+k*86400+6*3600):m0}
 // Täna ja homme: prices.json (Shelly kirjutab muutuse korral); vana vorming: history.json p
 // prices.json: hinnad (p, pm), Shelly plaan (pl alates ps, res minutit) ja rakendatud seadete rev
@@ -288,11 +278,6 @@ function inPrio(ts){var a=hm(S.priority.start),b=hm(S.priority.end);if(a===b)ret
   var mins=Math.floor(((ts+tzOff(ts))%86400)/60);return a<b?(mins>=a&&mins<b):(mins>=a||mins<b)}
 function findOv(ts){for(var i=0;i<S.overrides.length;i++)if(S.overrides[i].start===ts)return S.overrides[i];return null}
 // Plaan hinnapiiride järgi (kaitseaegu ei arvesta)
-function plan(ts,raw){if(!S.enabled)return{st:true,src:1};
-  var ov=findOv(ts);if(ov)return{st:ov.state,src:3};
-  if(raw===null)return{st:true,src:1};
-  var f=fp(raw);if(inPrio(ts))return{st:f<=S.price.priorityLimit,src:4};
-  return{st:f<=S.price.limit,src:5}}
 
 // Tegelik olek perioodi kohta ajaloost: n = pesi andmetega, act = enamus kütte, miss = erines plaanist
 function histAt(ts,step){var r={n:0,h:0,miss:false,src:0},e=null;for(var q=0;q<HD.length;q++){var x=HD[q];if(ts>=x.d0&&ts<x.d0+x.s.length*900){e=x;break}}if(!e){r.act=null;return r}var H={d0:e.d0,s:e.s},i0=Math.round((ts-H.d0)/900);
@@ -302,7 +287,7 @@ function histAt(ts,step){var r={n:0,h:0,miss:false,src:0},e=null;for(var q=0;q<H
 // ---------- Kuvamine ----------
 function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTML="";grid.innerHTML="";yax.innerHTML="";if(!S)return;
   var res=S.resolution,step=res*60,m=dayMid(dayOff),end=midnight(m+30*3600),t=now(),items=[];renderNav();
-  for(var ts=m;ts<end;ts+=step){var raw=periodRaw(ts,res);items.push({ts:ts,raw:raw,f:raw===null?null:fp(raw),pl:plan(ts,raw),pr:inPrio(ts)})}
+  for(var ts=m;ts<end;ts+=step){var raw=periodRaw(ts,res);items.push({ts:ts,raw:raw,f:raw===null?null:fp(raw),pl:{st:false,src:0},pr:inPrio(ts)})}
   var cnt=0,mx=S.price.limit,mn=0,anyPr=false;
   items.forEach(function(it){if(it.pr)anyPr=true;if(it.f!==null){cnt++;if(it.f>mx)mx=it.f;if(it.f<mn)mn=it.f}});
   // Tulbad algavad nulljoonest; |hind| < 0,5 joonistatakse 0,5 ühiku kõrgusena; miinuspoolel telge ei näidata
@@ -325,18 +310,19 @@ function renderBars(){var box=$("bars"),grid=$("grid"),yax=$("yax");box.innerHTM
     if(pv){it.pl={st:!!((pv>>1)&1),src:pv>>2};it.sh=1}
     if(it.f===null)cls=" none";
     else if(h&&h.n)cls=(h.act?(h.src===6?" heat prot":" heat"):"")+(h.miss?" miss":"");
+    else if(!pv)cls=" unk";
     else if(it.pl.st&&it.pl.src===6)cls=" heat prot";
-    else if(!past&&it.pr&&it.f>S.price.limit)cls=" prio";
+    else if(it.pl.st&&it.pr&&it.f>S.price.limit)cls=" prio";
     else cls=it.pl.st?" heat":"";
     if(!past&&pendTs[ts]&&pendRev>appliedRev)cls+=" pend";
-    var heatOn=(h&&h.n)?h.act:it.pl.st;if(heatOn&&it.f!==null){heatN++;heatSum+=it.f}
+    var heatOn=(h&&h.n)?h.act:(pv?it.pl.st:false);if(heatOn&&it.f!==null){heatN++;heatSum+=it.f}
     b.className="bar"+cls+(it.f!==null&&it.f<0?" neg":"")+(past?" past":"")+(ts===selTs?" sel":"");
     if(h&&h.n){b.dataset.hact=h.act?1:0;b.dataset.hsrc=h.src;b.dataset.hmiss=h.miss?1:0}
     b.dataset.ts=ts;b.dataset.f=it.f===null?"":it.f;b.dataset.raw=it.raw===null?"":it.raw;b.dataset.st=it.pl.st?1:0;b.dataset.src=it.pl.src;
     var y0=y(0),bh,bb;
     if(it.f===null){bh=2;bb=y0}else if(it.f>=0){bh=Math.max(2,y(Math.max(it.f,0.5))-y0);bb=y0}else{bh=Math.max(2,y0-y(Math.min(it.f,-0.5)));bb=y0-bh}
     b.style.height=bh+"px";b.style.bottom=bb+"px";
-    col.setAttribute("aria-label",hhmm(ts)+" "+(it.f===null?"hind puudub":r1(it.f)+" senti/kWh")+", "+(it.pl.st?"küte lubatud":"paus"));
+    col.setAttribute("aria-label",hhmm(ts)+" "+(it.f===null?"hind puudub":r1(it.f)+" senti/kWh")+", "+(pv||(h&&h.n)?((h&&h.n?h.act:it.pl.st)?"küte lubatud":"paus"):"plaan puudub"));
     var ov=findOv(ts);if(ov){var sp=document.createElement("span");sp.className="ov";sp.textContent=ov.state?"S":"P";b.appendChild(sp)}
     else if(pv&&(pv>>2)===7){var wp=document.createElement("span");wp.className="ov wt";wp.textContent="%";wp.title="Ootab odavamat perioodi";b.appendChild(wp)}
     col.appendChild(b);box.appendChild(col)});
@@ -352,7 +338,7 @@ function goDay(d){var k=dayOff+d;if(k<-(KEEP-1)||k>1)return;clearTimeout(selT);s
   if(k<0){var m=dayMid(k);renderBars();loadDay(m).then(renderBars)}else renderBars()}
 
 var selTs=null,selT=null,SEL_MS=5000;
-function reason(src,st){if(src===1)return S.enabled?"Turvarežiim – plaan puudub":"Automaatika väljas";if(src===2)return "Boost";
+function reason(src,st){if(!src)return "Plaan puudub";if(src===1)return S.enabled?"Turvarežiim – plaan puudub":"Automaatika väljas";if(src===2)return "Boost";
   if(src===3)return st?"Käsitsi: SEES":"Käsitsi: PAUS";if(src===4)return st?"Küte – prioriteetaeg":"Paus – üle prioriteetaja piiri";
   if(src===6)return st?"Küte – kaitseaeg":"Paus – kaitseaeg";
   if(src===7)return "Paus – ootab odavamat tundi";
@@ -373,18 +359,14 @@ function showTip(ts,withBtn){var b=$("bars").querySelector('.bar[data-ts="'+ts+'
     '<div class="act small">'+(fut?(pendTs[ts]&&pendRev>appliedRev?'<span style="color:var(--fjord)"><b>Ootab rakendumist…</b></span>':'<span>Olek: <b>'+mode+'</b></span>'):(hk?'<span class="muted">Tegelik olek'+(b.dataset.hmiss==="1"?' (osa perioodist erines plaanist)':'')+'</span>':'<span class="muted">Möödunud periood</span>'))+
     (fut&&withBtn?'<button type="button" id="tipBtn">Muuda</button>':'<button type="button" class="ph" tabindex="-1" aria-hidden="true">Muuda</button>')+'</div>';
   var btn=$("tipBtn");if(btn)btn.onclick=function(e){e.stopPropagation();cycleOv(ts)}}
-// Jooksva perioodi tegelik olek ajaloost, kui see erineb plaanist
-function actualLine(ts,step,st,src){var t=now();if(!(ts<=t&&t<ts+step))return "";var l=lastHist();if(!l||l.ts<ts)return "";
-  if(l.act===st&&l.src===src)return "";
-  return '<div class="small">Tegelik: <b>'+(l.act?"küte":"paus")+" – "+SRC[l.src].toLowerCase()+'</b> <span class="muted">(seisuga '+hhmm(l.ts)+')</span></div>'}
 function cycleOv(ts){var i=-1;for(var k=0;k<S.overrides.length;k++)if(S.overrides[k].start===ts)i=k;
   if(i<0){if(S.overrides.length>=MAX_OV){toast("Korraga saab määrata kuni "+MAX_OV+" käsitsi perioodi.");return}S.overrides.push({start:ts,state:true})}
   else if(S.overrides[i].state)S.overrides[i].state=false;else S.overrides.splice(i,1);
   pendTs[ts]=1;markPending();renderBars();armSel()}
 
-function renderState(){var t=now(),res=S.resolution,ps=t-((t+tzOff(t))%(res*60));var raw=periodRaw(ps,res),pl=plan(ps,raw);
+function renderState(){var t=now(),res=S.resolution,ps=t-((t+tzOff(t))%(res*60));var raw=periodRaw(ps,res),pv0=plan2[ps]||0;
   var last=lastHist();var box=$("mainCard");
-  var st=last?last.act:pl.st;box.className=st?"heat":"";
+  var st=last?last.act:(pv0?((pv0>>1)&1)===1:false);box.className=st?"heat":"";
   $("stLabel").textContent=st?"Küte lubatud":"Paus";
   $("stPrice").innerHTML=raw===null?"–":r1(fp(raw))+" <small>s/kWh</small>";
   $("stSrc").textContent=(last?("Allikas: "+SRC[last.src]):"Shelly olek pole veel teada")+(pendRev>appliedRev&&pendRev?" · seaded ootavad rakendumist…":"");
@@ -478,7 +460,7 @@ function load(){if(saveT||saving)return;
       $("login").hidden=true;$("app").hidden=false;renderAll()})
     .catch(function(err){if(err.message==="auth"){localStorage.removeItem("sb_token");token="";showLogin("Token ei kehti või puudub õigus.")}else toast("Seadete laadimine ebaõnnestus: "+err.message);throw err})
     .then(function(){return Promise.allSettled([
-      getFile("history.json").then(function(f){var o=JSON.parse(f.text);H=null;if(o&&typeof o.s==="string"){if(o.v===2){H={d0:o.d,s:o.s};addHist(o.d,o.s)}else if(o.v===1){H={d0:o.d0,s:o.s};addHist(o.d0,o.s)}}}).catch(function(){H=null})])})
+      getFile("history.json").then(function(f){var o=JSON.parse(f.text);H=null;if(o&&typeof o.s==="string"){if(o.v===2){H={d0:o.d,s:o.s};addHist(o.d,o.s)}}}).catch(function(){H=null})])})
     .then(function(){priceErr="";var p=[loadPrices(),loadPlan(),loadDay(dayMid(0),true)];if(dayOff<0)p.push(loadDay(dayMid(dayOff)));return Promise.all(p)})
     .then(function(){renderAll(true);checkShelly()})}
 // Shelly ühendus: history.json viimase commit'i aeg
