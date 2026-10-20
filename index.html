@@ -52,10 +52,13 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 #mainCard .price small{font-size:.95rem;font-weight:400;color:var(--muted)}
 #mainCard .help{width:28px;height:28px;font-size:.9rem}
 .srcrow{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
-#dayStats{margin-top:6px}
-.mrow{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
-.mrow button{width:32px;height:32px;padding:0;line-height:1}
-.mrow #mNow{width:auto;padding:4px 12px;font-size:.85rem}
+.sblock{margin-top:14px}
+.snav{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.snav button{width:40px;padding:5px 0;font-size:1.2rem;line-height:1}
+.slabel{min-width:8.5em;font-weight:700}
+.snav .snow,.sday .snow{width:auto;padding:4px 12px;font-size:.85rem}
+.sday{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.sday .slabel{min-width:0}
 #mText b{color:var(--ink)}
 #dayStats b{color:var(--ink)}
 .mid{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;margin:14px 0 8px}
@@ -162,8 +165,11 @@ header h1{font-size:1.35rem}
     <div id="chart"><div id="yax" aria-hidden="true"></div><div id="plot"><div id="grid" aria-hidden="true"></div><div id="bars" aria-label="Perioodide hinnad"></div></div></div>
     <div class="axis" id="axisRow"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
     <div id="barinfo" class="small"></div>
-    <div id="dayStats" class="small muted"></div>
-    <div class="mrow"><button type="button" id="mPrev" aria-label="Eelmine kuu">‹</button><span id="mText" class="small muted"></span><button type="button" id="mNext" aria-label="Järgmine kuu">›</button><button type="button" id="mNow" hidden>Jooksev kuu</button></div>
+    <div class="sblock sday"><span id="sdLabel" class="slabel">Täna</span><span id="dayStats" class="small muted"></span><button type="button" id="sdNow" class="snow" hidden>Täna</button></div>
+    <div class="sblock">
+      <div class="snav"><button type="button" id="mPrev" aria-label="Eelmine kuu">‹</button><span id="mLabel" class="slabel"></span><button type="button" id="mNext" aria-label="Järgmine kuu">›</button><button type="button" id="mNow" class="snow" hidden>Jooksev kuu</button></div>
+      <div id="mText" class="small muted"></div>
+    </div>
     <div id="chartHelp" hidden>
     <div class="legend">
       <span><i class="sw" style="background:var(--heat)"></i>Küte lubatud</span>
@@ -347,20 +353,21 @@ var MONTHS=["jaanuar","veebruar","märts","aprill","mai","juuni","juuli","august
 function monthKey(off){var k=ymd(dayMid(0)),y=+k.slice(0,4),mo=+k.slice(5,7)-1+off;y+=Math.floor(mo/12);mo=((mo%12)+12)%12;return y+"-"+(mo<9?"0":"")+(mo+1)}
 function renderMonth(){var key=monthKey(mOff),y=+key.slice(0,4),mo=+key.slice(5,7);
   $("mPrev").disabled=mOff<=-35;$("mNext").disabled=mOff>=0;$("mNow").hidden=mOff===0;
-  var name=MONTHS[mo-1];name=name.charAt(0).toUpperCase()+name.slice(1)+" "+y;
-  if(!monthDone[key]){$("mText").innerHTML="<b>"+name+"</b>: laadin…";loadMonth(key).then(function(){if(monthKey(mOff)===key)renderMonth()});return}
+  var name=MONTHS[mo-1];name=name.charAt(0).toUpperCase()+name.slice(1)+" "+y;$("mLabel").textContent=name;
+  if(!monthDone[key]){$("mText").textContent="Laadin…";loadMonth(key).then(function(){if(monthKey(mOff)===key)renderMonth()});return}
   var start=midnight(Date.UTC(y,mo-1,1,12)/1000),end=midnight(Date.UTC(y,mo,1,12)/1000),t=now(),hs=0,hsum=0,hn=0,all=0,na=0;
   for(var d=start;d<end&&d<t;){var nd=midnight(d+30*3600),e=null;for(var q=0;q<HD.length;q++)if(HD[q].d0===d){e=HD[q];break}
     for(var ts=d,i=0;ts<nd&&ts<t;ts+=900,i++){var raw=prices[ts],v=e?E.indexOf(e.s.charAt(i)):0;
       var fv=raw!==undefined?slotFin(ts):undefined;if(fv!==undefined){all+=fv;na++}if(v>0&&(v&1)){hs++;if(fv!==undefined){hsum+=fv;hn++}}}
     d=nd}
-  if(!hs&&!na){$("mText").innerHTML="<b>"+name+"</b>: andmed puuduvad";return}
+  if(!hs&&!na){$("mText").textContent="Andmed puuduvad";return}
   var ha=hn?hsum/hn:null,ma=na?all/na:null,pc=(ha!==null&&ma)?Math.round((ha/ma-1)*100):null;
-  $("mText").innerHTML="<b>"+name+"</b>: küte lubatud <b>"+Math.round(hs/4)+" h</b>"+(ha!==null?" · kütteaja keskmine hind <b>"+r1(ha)+"</b>":"")+(ma!==null?" · kuu keskmine "+r1(ma)+" s/kWh"+(pc!==null?" ("+(pc>0?"+":"")+pc+"%)":""):"")}
+  $("mText").innerHTML="Küte lubatud <b>"+Math.round(hs/4)+" h</b>"+(ha!==null?" · kütteaja keskmine hind <b>"+r1(ha)+"</b>":"")+(ma!==null?" · kuu keskmine "+r1(ma)+" s/kWh"+(pc!==null?" ("+(pc>0?"+":"")+pc+"%)":""):"")}
 function dayLabel(k){return k===1?"Homme":k===0?"Täna":k===-1?"Eile":k===-2?"Üleeile":(-k)+" p tagasi"}
 function hasTomorrow(){var m=dayMid(1);for(var ts=m;ts<m+86400;ts+=900)if(prices[ts]!==undefined)return true;return false}
 function renderNav(){var m=dayMid(dayOff);$("dLabel").textContent=dayLabel(dayOff)+" · "+dname(m);
-  $("dPrev").disabled=dayOff<=-DAYS_BACK;$("dNext").disabled=dayOff>=1||(dayOff===0&&!hasTomorrow())}
+  $("dPrev").disabled=dayOff<=-DAYS_BACK;$("dNext").disabled=dayOff>=1||(dayOff===0&&!hasTomorrow());
+  $("sdLabel").textContent=dayLabel(dayOff)+(Math.abs(dayOff)>1?" · "+dname(m):"");$("sdNow").hidden=dayOff===0}
 function goDay(d){var k=dayOff+d;if(k<-DAYS_BACK||k>1)return;clearTimeout(selT);selT=null;selTs=null;dayOff=k;
   if(k<0){var m=dayMid(k);renderBars();loadDay(m).then(renderBars)}else renderBars()}
 
@@ -516,6 +523,7 @@ $("bars").onmouseover=function(e){if(selTs!==null)return;var b=e.target.closest(
 $("plot").onmouseleave=function(){if(selTs===null&&S)showTip(curTs(),false)};
 document.addEventListener("click",function(e){if(!$("bars").contains(e.target)&&!$("tip").contains(e.target))release()});
 $("gearBtn").onclick=function(e){e.stopPropagation();var sec=$("setSec"),open=sec.hidden;sec.hidden=!open;this.setAttribute("aria-expanded",String(open));if(open&&sec.scrollIntoView)sec.scrollIntoView({behavior:"smooth",block:"start"})};
+$("sdNow").onclick=function(e){e.stopPropagation();goDay(-dayOff)};
 $("mPrev").onclick=function(e){e.stopPropagation();if(mOff>-35){mOff--;renderMonth()}};
 $("mNext").onclick=function(e){e.stopPropagation();if(mOff<0){mOff++;renderMonth()}};
 $("mNow").onclick=function(e){e.stopPropagation();mOff=0;renderMonth()};
