@@ -53,7 +53,9 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 #mainCard .help{width:28px;height:28px;font-size:.9rem}
 .srcrow{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .sblock{margin-top:14px}
-.snav{display:grid;grid-template-columns:40px 11.5em 40px 34px;align-items:center;gap:10px;margin-bottom:6px}
+.snav{display:grid;grid-template-columns:40px minmax(0,11.5em) 40px 34px;align-items:center;gap:10px;margin-bottom:6px}
+@media (max-width:420px){.snav{gap:6px}.sblock .small{padding-left:46px}}
+.snav .snow[hidden]{display:none}
 .snav button{width:40px;padding:5px 0;font-size:1.2rem;line-height:1}
 .slabel{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sblock .small{padding-left:50px}
