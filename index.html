@@ -53,12 +53,13 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 #mainCard .help{width:28px;height:28px;font-size:.9rem}
 .srcrow{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .sblock{margin-top:14px}
-.snav{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.snav{display:grid;grid-template-columns:40px 11.5em 40px 34px;align-items:center;gap:10px;margin-bottom:6px}
 .snav button{width:40px;padding:5px 0;font-size:1.2rem;line-height:1}
-.slabel{min-width:8.5em;font-weight:700}
-.snav .snow,.sday .snow{width:auto;padding:4px 12px;font-size:.85rem}
-.sday{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.sday .slabel{min-width:0}
+.slabel{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sblock .small{padding-left:50px}
+.pblock{text-align:right}
+.prow{display:flex;align-items:baseline;justify-content:flex-end;gap:12px}
+.snav .snow{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:var(--fjord)}
 #mText b{color:var(--ink)}
 #dayStats b{color:var(--ink)}
 .mid{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;margin:14px 0 8px}
@@ -155,19 +156,21 @@ header h1{font-size:1.35rem}
   <section id="mainCard">
     <div class="top">
       <div class="tl"><span class="label" id="stLabel">–</span><button type="button" class="help" id="chartHelpBtn" aria-expanded="false" aria-controls="chartHelp" aria-label="Graafiku selgitus">?</button></div>
-      <div class="tr"><span class="muted small" id="stTime"></span><span class="price num" id="stPrice">–</span></div>
     </div>
-    <div class="srcrow"><span class="muted small" id="stSrc"></span><span class="muted small" id="stAvg"></span></div>
+    <div class="muted small" id="stSrc"></div>
     <div class="mid">
-      <div class="daynav"><button type="button" id="dPrev" aria-label="Eelmine päev">‹</button><span id="dLabel">Täna</span><button type="button" id="dNext" aria-label="Järgmine päev">›</button></div>
+      <div class="pblock"><div class="prow"><span class="muted small" id="stTime"></span><span class="price num" id="stPrice">–</span></div><div class="muted small" id="stAvg"></div></div>
       <div id="tip" aria-live="polite"></div>
     </div>
     <div id="chart"><div id="yax" aria-hidden="true"></div><div id="plot"><div id="grid" aria-hidden="true"></div><div id="bars" aria-label="Perioodide hinnad"></div></div></div>
     <div class="axis" id="axisRow"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
     <div id="barinfo" class="small"></div>
-    <div class="sblock sday"><span id="sdLabel" class="slabel">Täna</span><span id="dayStats" class="small muted"></span><button type="button" id="sdNow" class="snow" hidden>Täna</button></div>
     <div class="sblock">
-      <div class="snav"><button type="button" id="mPrev" aria-label="Eelmine kuu">‹</button><span id="mLabel" class="slabel"></span><button type="button" id="mNext" aria-label="Järgmine kuu">›</button><button type="button" id="mNow" class="snow" hidden>Jooksev kuu</button></div>
+      <div class="snav"><button type="button" id="dPrev" aria-label="Eelmine päev">‹</button><span id="dLabel" class="slabel">Täna</span><button type="button" id="dNext" aria-label="Järgmine päev">›</button><button type="button" id="sdNow" class="snow" hidden aria-label="Täna" title="Täna"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16"/><rect x="8" y="15" width="2" height="2" fill="currentColor"/></svg></button></div>
+      <div id="dayStats" class="small muted"></div>
+    </div>
+    <div class="sblock">
+      <div class="snav"><button type="button" id="mPrev" aria-label="Eelmine kuu">‹</button><span id="mLabel" class="slabel"></span><button type="button" id="mNext" aria-label="Järgmine kuu">›</button><button type="button" id="mNow" class="snow" hidden aria-label="Jooksev kuu" title="Jooksev kuu"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16"/><rect x="8" y="15" width="2" height="2" fill="currentColor"/></svg></button></div>
       <div id="mText" class="small muted"></div>
     </div>
     <div id="chartHelp" hidden>
@@ -367,7 +370,7 @@ function dayLabel(k){return k===1?"Homme":k===0?"Täna":k===-1?"Eile":k===-2?"Ü
 function hasTomorrow(){var m=dayMid(1);for(var ts=m;ts<m+86400;ts+=900)if(prices[ts]!==undefined)return true;return false}
 function renderNav(){var m=dayMid(dayOff);$("dLabel").textContent=dayLabel(dayOff)+" · "+dname(m);
   $("dPrev").disabled=dayOff<=-DAYS_BACK;$("dNext").disabled=dayOff>=1||(dayOff===0&&!hasTomorrow());
-  $("sdLabel").textContent=dayLabel(dayOff)+(Math.abs(dayOff)>1?" · "+dname(m):"");$("sdNow").hidden=dayOff===0}
+  $("sdNow").hidden=dayOff===0}
 function goDay(d){var k=dayOff+d;if(k<-DAYS_BACK||k>1)return;clearTimeout(selT);selT=null;selTs=null;dayOff=k;
   if(k<0){var m=dayMid(k);renderBars();loadDay(m).then(renderBars)}else renderBars()}
 
@@ -403,7 +406,7 @@ function renderState(){var t=now(),res=S.resolution,ps=t-((t+tzOff(t))%(res*60))
   var st=last?last.act:(pv0?((pv0>>1)&1)===1:false);box.className=st?"heat":"";
   $("stLabel").textContent=st?"Küte lubatud":"Paus";
   $("stPrice").innerHTML=raw===null?"–":r1(fp(raw))+" <small>s/kWh</small>";
-  $("stSrc").textContent=(last?("Allikas: "+SRC[last.src]):"Shelly olek pole veel teada")+(pendRev>appliedRev&&pendRev?" · seaded ootavad rakendumist…":"");
+  $("stSrc").textContent=!last?"Shelly olek pole veel teada":(pendRev>appliedRev&&pendRev?"Seaded ootavad rakendumist…":"");
   $("stTime").textContent=last?("Seisuga "+hhmm(last.ts)):"";
   var m0=dayMid(0),m1=dayMid(1),as=0,an=0;for(var q=m0;q<m1;q+=res*60){var rq=periodRaw(q,res);if(rq!==null){as+=fp(rq);an++}}
   $("stAvg").textContent=an?("Päeva keskmine "+r1(as/an)+" s/kWh"):"";}
