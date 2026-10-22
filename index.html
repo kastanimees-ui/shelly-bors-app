@@ -55,7 +55,7 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 .srcrow{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .sblock{margin-top:14px}
 .snav{display:grid;grid-template-columns:40px minmax(0,11.5em) 40px 34px;align-items:center;gap:10px;margin-bottom:6px}
-@media (max-width:420px){.snav{gap:6px}.sblock .small{padding-left:46px}}
+@media (max-width:420px){.snav{gap:6px}.sblock .small{padding-left:0!important}#tip{font-size:.85rem}#tip .lbl{display:none}#tip .act button{padding:3px 10px}}
 .snav .snow[hidden]{display:none}
 .snav button{width:40px;padding:5px 0;font-size:1.2rem;line-height:1}
 .slabel{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -104,7 +104,9 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 @media (max-width:640px){.mid{grid-template-columns:1fr;gap:10px}}
 #tip .row{display:flex;justify-content:space-between;gap:8px}
 #tip .act{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px}
-#tip .act button{padding:3px 14px}
+#tip .act button{padding:3px 14px;flex:none}
+#tip .act>span{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tip .row>*{white-space:nowrap}
 #tip .ph{visibility:hidden}
 .bar.heat{background-color:var(--heat)}
 .bar.past{opacity:.6}
@@ -394,8 +396,9 @@ function showTip(ts,withBtn){var b=$("bars").querySelector('.bar[data-ts="'+ts+'
   var mode=ov?(ov.state?"käsitsi SEES":"käsitsi PAUS"):"automaatne",hk=!fut&&b.dataset.hact!==undefined;
   if(hk){st=b.dataset.hact==="1";src=+b.dataset.hsrc}
   $("tip").innerHTML='<div class="row"><b>'+hhmm(ts)+"–"+hhmm(ts+step)+'</b><b class="num">'+(f===""?"–":r1(+f)+" s/kWh")+'</b></div>'+
-    '<div class="act small">'+(fut?(pendTs[ts]&&pendRev>appliedRev?'<span style="color:var(--fjord)"><b>Ootab rakendumist…</b></span>':'<span>Olek: <b>'+mode+'</b>'+(ov?'':' <span class="muted">– '+why(src,st)+'</span>')+'</span>'):(hk?'<span>Tegelik <span class="muted">– '+why(src,st)+(b.dataset.hmiss==="1"?' (osa perioodist erines plaanist)':'')+'</span></span>':'<span class="muted">Möödunud periood – tegelik olek teadmata</span>'))+
+    '<div class="act small">'+(fut?(pendTs[ts]&&pendRev>appliedRev?'<span style="color:var(--fjord)"><b>Ootab rakendumist…</b></span>':'<span><span class="lbl">Olek: </span><b>'+mode+'</b>'+(ov?'':' <span class="muted">– '+why(src,st)+'</span>')+'</span>'):(hk?'<span>Tegelik <span class="muted">– '+why(src,st)+(b.dataset.hmiss==="1"?' (osa perioodist erines plaanist)':'')+'</span></span>':'<span class="muted">Möödunud periood – tegelik olek teadmata</span>'))+
     (fut&&withBtn?'<button type="button" id="tipBtn">Muuda</button>':'<button type="button" class="ph" tabindex="-1" aria-hidden="true">Muuda</button>')+'</div>';
+  var sp=$("tip").querySelector(".act>span");if(sp)sp.title=sp.textContent;
   var btn=$("tipBtn");if(btn)btn.onclick=function(e){e.stopPropagation();cycleOv(ts)}}
 function cycleOv(ts){var i=-1;for(var k=0;k<S.overrides.length;k++)if(S.overrides[k].start===ts)i=k;
   if(i<0){if(S.overrides.length>=MAX_OV){toast("Korraga saab määrata kuni "+MAX_OV+" käsitsi perioodi.");return}S.overrides.push({start:ts,state:true})}
