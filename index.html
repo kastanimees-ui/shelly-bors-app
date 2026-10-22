@@ -61,7 +61,6 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 .slabel{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sblock .small{padding-left:50px}
 .pblock{text-align:right;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
-.pblock .logo{width:56px;height:56px;border-radius:14px;display:block}
 .prow{display:flex;align-items:baseline;justify-content:flex-end;gap:12px}
 .snav .snow{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:var(--fjord)}
 #mText b{color:var(--ink)}
@@ -160,7 +159,7 @@ header h1{font-size:1.35rem}
   <section id="mainCard">
     <div class="muted small" id="stSrc"></div>
     <div class="mid">
-      <div class="pblock"><img class="logo" src="icon.svg" alt="Börsiküte" width="56" height="56"><div class="prow"><span class="muted small" id="stTime"></span><span class="price num" id="stPrice">–</span></div></div>
+      <div class="pblock"><div class="prow"><span class="muted small" id="stTime"></span><span class="price num" id="stPrice">–</span></div></div>
       <div id="tip" aria-live="polite"></div>
     </div>
     <div id="chart"><div id="yax" aria-hidden="true"></div><div id="plot"><div id="grid" aria-hidden="true"></div><div id="bars" aria-label="Perioodide hinnad"></div></div></div>
@@ -395,7 +394,7 @@ function showTip(ts,withBtn){var b=$("bars").querySelector('.bar[data-ts="'+ts+'
   var mode=ov?(ov.state?"käsitsi SEES":"käsitsi PAUS"):"automaatne",hk=!fut&&b.dataset.hact!==undefined;
   if(hk){st=b.dataset.hact==="1";src=+b.dataset.hsrc}
   $("tip").innerHTML='<div class="row"><b>'+hhmm(ts)+"–"+hhmm(ts+step)+'</b><b class="num">'+(f===""?"–":r1(+f)+" s/kWh")+'</b></div>'+
-    '<div class="act small">'+(fut?(pendTs[ts]&&pendRev>appliedRev?'<span style="color:var(--fjord)"><b>Ootab rakendumist…</b></span>':'<span>Olek: <b>'+mode+'</b> <span class="muted">– '+why(src,st)+'</span></span>'):(hk?'<span>Tegelik <span class="muted">– '+why(src,st)+(b.dataset.hmiss==="1"?' (osa perioodist erines plaanist)':'')+'</span></span>':'<span class="muted">Möödunud periood – tegelik olek teadmata</span>'))+
+    '<div class="act small">'+(fut?(pendTs[ts]&&pendRev>appliedRev?'<span style="color:var(--fjord)"><b>Ootab rakendumist…</b></span>':'<span>Olek: <b>'+mode+'</b>'+(ov?'':' <span class="muted">– '+why(src,st)+'</span>')+'</span>'):(hk?'<span>Tegelik <span class="muted">– '+why(src,st)+(b.dataset.hmiss==="1"?' (osa perioodist erines plaanist)':'')+'</span></span>':'<span class="muted">Möödunud periood – tegelik olek teadmata</span>'))+
     (fut&&withBtn?'<button type="button" id="tipBtn">Muuda</button>':'<button type="button" class="ph" tabindex="-1" aria-hidden="true">Muuda</button>')+'</div>';
   var btn=$("tipBtn");if(btn)btn.onclick=function(e){e.stopPropagation();cycleOv(ts)}}
 function cycleOv(ts){var i=-1;for(var k=0;k<S.overrides.length;k++)if(S.overrides[k].start===ts)i=k;
