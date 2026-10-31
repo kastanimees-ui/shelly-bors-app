@@ -81,7 +81,7 @@ section{background:var(--panel);border-radius:var(--radius-l);padding:16px;margi
 .gl.zero{border-top:2px solid var(--muted)}
 .lim{position:absolute;left:0;right:0;border-top:2px dashed var(--fjord);z-index:2;pointer-events:none}
 .limp{position:absolute;border-top:2px dotted var(--ink);z-index:2;pointer-events:none}
-#bars{position:absolute;inset:0;display:flex;gap:2px;touch-action:pan-y;-webkit-user-select:none;user-select:none}
+#bars{position:absolute;inset:0;display:flex;gap:2px;touch-action:none;-webkit-user-select:none;user-select:none}
 .col.hov{background:rgba(127,127,127,.14)}
 .col.hov .bar{filter:brightness(.88)}
 #bars.q{gap:1px}
@@ -518,9 +518,10 @@ $("chartHelpBtn").onclick=function(e){e.stopPropagation();var h=$("chartHelp");h
 // Telefon: sõrmega üle tulpade lohistamine näitab infot, sõrme tõstmine valib tulba
 var drag=null,noClick=false;
 function clearHov(){var x=$("bars").querySelectorAll(".col.hov");for(var i=0;i<x.length;i++)x[i].classList.remove("hov")}
-function scrub(e){var el=document.elementFromPoint(e.clientX,e.clientY),col=el&&el.closest?el.closest(".col"):null;
+// Valik järgib ainult sõrme horisontaalset asukohta (sõrme võib viia graafikust välja, nt allapoole)
+function scrub(e){var bx=$("bars"),cs=bx.querySelectorAll(".col"),rc=bx.getBoundingClientRect();if(!cs.length||!rc.width)return;var k=Math.floor((e.clientX-rc.left)/rc.width*cs.length);k=Math.max(0,Math.min(cs.length-1,k));var col=cs[k];
   if(!col||!$("bars").contains(col))return;var ts=+col.dataset.ts;if(ts===drag.ts)return;drag.ts=ts;clearHov();col.classList.add("hov");showTip(ts,false)}
-$("bars").addEventListener("pointerdown",function(e){if(e.pointerType!=="touch")return;drag={ts:null};scrub(e)});
+$("bars").addEventListener("pointerdown",function(e){if(e.pointerType!=="touch")return;drag={ts:null};try{$("bars").setPointerCapture(e.pointerId)}catch(_){}scrub(e)});
 $("bars").addEventListener("pointermove",function(e){if(drag&&e.pointerType==="touch")scrub(e)});
 $("bars").addEventListener("pointerup",function(e){if(!drag)return;scrub(e);var ts=drag.ts;drag=null;clearHov();
   noClick=true;setTimeout(function(){noClick=false},500);if(ts!==null)select(ts)});
